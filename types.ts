@@ -2,8 +2,8 @@
 export interface User {
   id: string;
   username: string;
-  password?: string;
-  role: 'admin' | 'manager';
+  role: 'admin' | 'owner';
+  apartmentId?: string; // Lié si c'est un propriétaire
 }
 
 export interface BuildingInfo {
@@ -15,6 +15,7 @@ export interface BuildingInfo {
   defaultMonthlyFee: number;
   isConfigured: boolean;
   autoRemindersEnabled: boolean;
+  notificationsEnabled: boolean;
   reminderLanguage: 'ar' | 'fr';
   whatsappTemplate?: string;
   whatsappDetailedTemplate?: string;
@@ -54,7 +55,7 @@ export interface AssetPayment {
   assetId: string;
   amount: number;
   date: string;
-  period: string; // "Janvier 2026" ou "Année 2026"
+  period: string; 
   year: number;
 }
 
@@ -84,6 +85,8 @@ export interface Project {
   status: 'planned' | 'in-progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   estimatedBudget?: number;
+  authorId: string; // 'admin' ou apartmentId
+  authorName: string;
 }
 
 export interface Complaint {
@@ -94,6 +97,7 @@ export interface Complaint {
   description: string;
   status: 'open' | 'pending' | 'resolved';
   priority: 'low' | 'medium' | 'high';
+  authorName: string;
 }
 
 export interface Payment {
@@ -103,11 +107,4 @@ export interface Payment {
   year: number;
   amount: number;
   paidDate: string;
-}
-
-export interface FinancialSummary {
-  totalRevenue: number;
-  totalExpenses: number;
-  balance: number;
-  collectionRate: number;
 }

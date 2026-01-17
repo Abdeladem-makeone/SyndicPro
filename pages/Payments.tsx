@@ -9,23 +9,22 @@ interface PaymentsProps {
   payments: Payment[];
   buildingInfo: BuildingInfo;
   onTogglePayment: (aptId: string, month: number, year: number) => void;
-  // Ajout potentiel d'une action groupée via le composant parent
   onBulkPay?: (aptIds: string[], month: number, year: number) => void;
 }
 
 const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo, onTogglePayment }) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [viewMode, setViewMode] = useState<'apartment' | 'monthly'>('apartment');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [searchTerm, setSearchTerm] = useState('');
 
-  const years = [2024, 2025, 2026, 2027];
+  const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3];
 
   const isPaid = (aptId: string, month: number) => {
     return payments.some(p => p.apartmentId === aptId && p.month === month && p.year === selectedYear);
   };
 
-  // Filtrage des appartements
   const filteredApartments = useMemo(() => {
     return apartments.filter(apt => 
       apt.number.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -33,7 +32,6 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
     );
   }, [apartments, searchTerm]);
 
-  // Calculs financiers pour la synthèse
   const stats = useMemo(() => {
     if (viewMode === 'monthly') {
       const expected = apartments.reduce((sum, a) => sum + a.monthlyFee, 0);
@@ -83,7 +81,6 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
 
   return (
     <div className="space-y-6">
-      {/* Barre d'outils supérieure */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4">
         <div className="space-y-4 w-full xl:w-auto">
           <div className="flex items-center gap-4">
@@ -147,7 +144,6 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
         </div>
       </div>
 
-      {/* Widgets de synthèse */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Attendu</p>
@@ -172,7 +168,6 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
         </div>
       </div>
 
-      {/* Sélecteur de mois pour vue mensuelle */}
       {viewMode === 'monthly' && (
         <div className="bg-white p-2 rounded-2xl border border-slate-100 shadow-sm flex gap-1 overflow-x-auto no-scrollbar">
           {MONTHS.map((m, idx) => (
@@ -187,14 +182,13 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
         </div>
       )}
 
-      {/* Tableaux de données */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto no-scrollbar">
           {viewMode === 'apartment' ? (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.05)] min-w-[180px]">Lot / Propriétaire</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_rgba(0,0,0,0.05)] min-w-[150px]">Lot</th>
                   {MONTHS.map((m) => (
                     <th key={m} className="px-2 py-4 text-[10px] font-bold text-slate-500 uppercase text-center min-w-[70px]">{m.substring(0, 3)}.</th>
                   ))}
@@ -209,7 +203,7 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
                       <td className="px-6 py-4 sticky left-0 bg-white group-hover:bg-slate-50/80 z-10 border-r shadow-[2px_0_5px_rgba(0,0,0,0.02)] transition-colors">
                         <div className="flex flex-col">
                           <span className="font-black text-indigo-600 text-sm">{apt.number}</span>
-                          <span className="text-[11px] text-slate-500 font-medium truncate max-w-[140px]">{apt.owner}</span>
+                          <span className="text-[11px] text-slate-500 font-medium truncate max-w-[120px]">{apt.owner}</span>
                         </div>
                       </td>
                       {MONTHS.map((_, idx) => (
@@ -278,15 +272,6 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
                 })}
               </tbody>
             </table>
-          )}
-          {filteredApartments.length === 0 && (
-            <div className="p-16 text-center">
-               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <i className="fas fa-search text-2xl text-slate-200"></i>
-               </div>
-               <p className="text-slate-400 font-bold">Aucun appartement ne correspond à votre recherche.</p>
-               <button onClick={() => setSearchTerm('')} className="text-indigo-600 text-xs font-bold mt-2 hover:underline">Effacer la recherche</button>
-            </div>
           )}
         </div>
       </div>

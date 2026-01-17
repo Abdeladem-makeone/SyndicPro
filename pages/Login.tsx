@@ -1,103 +1,230 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Apartment } from '../types';
 
 interface LoginProps {
-  onLogin: (user: string, pass: string) => boolean;
+  apartments: Apartment[];
+  onLogin: (user: any) => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
+  const [activeTab, setActiveTab] = useState<'syndic' | 'owner'>('syndic');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  
+  // États pour proprio
+  const [selectedAptId, setSelectedAptId] = useState('');
+  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState(1); // 1: Info, 2: OTP
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [enteredOtp, setEnteredOtp] = useState('');
+  
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Trier les appartements pour la liste déroulante
+  const sortedApartments = useMemo(() => {
+    return [...apartments].sort((a, b) => {
+      if (a.floor !== b.floor) return a.floor - b.floor;
+      return a.number.localeCompare(b.number, undefined, { numeric: true });
+    });
+  }, [apartments]);
+
+  // Fonction pour nettoyer un numéro de téléphone (ne garder que les chiffres)
+  const normalizePhone = (p: string) => p.replace(/\D/g, '');
+
+  const handleSyndicLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = onLogin(username, password);
-    if (!success) {
-      setError(true);
-      setTimeout(() => setError(false), 3000);
+    if (username === 'admin' && password === 'admin') {
+      onLogin({ id: 'admin', username: 'Administrateur', role: 'admin' });
+    } else {
+      setError('Identifiants Syndic incorrects (admin/admin).');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleSendOtp = () => {
+    const inputPhone = normalizePhone(phone);
+
+    if (!selectedAptId || !inputPhone) {
+      setError('Veuillez sélectionner votre lot et saisir votre téléphone.');
+      return;
+    }
+
+    // Recherche de l'appartement sélectionné
+    const apt = apartments.find(a => a.id === selectedAptId);
+
+    if (apt) {
+      const storedPhone = normalizePhone(apt.phone || '');
+      
+      // Vérification du téléphone (doit être renseigné et correspondre aux derniers chiffres)
+      const phoneMatch = storedPhone !== '' && (storedPhone === inputPhone || storedPhone.endsWith(inputPhone) || inputPhone.endsWith(storedPhone));
+      
+      if (phoneMatch) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(otp);
+        setStep(2);
+        setError('');
+        
+        // Simulation d'envoi
+        console.log(`CODE OTP pour ${apt.owner}: ${otp}`);
+        alert(`Simulation WhatsApp pour ${apt.owner} (Lot ${apt.number}) :\n\n"Votre code d'accès SyndicPro est : ${otp}"`);
+      } else {
+        setError("Le numéro de téléphone ne correspond pas à celui enregistré pour ce lot.");
+        setTimeout(() => setError(''), 4000);
+      }
+    } else {
+      setError("Erreur lors de la sélection de l'appartement.");
+    }
+  };
+
+  const handleVerifyOtp = () => {
+    if (enteredOtp === generatedOtp && generatedOtp !== '') {
+      const apt = apartments.find(a => a.id === selectedAptId);
+      onLogin({ 
+        id: apt?.id || 'owner', 
+        username: apt?.owner || 'Propriétaire', 
+        role: 'owner',
+        apartmentId: apt?.id 
+      });
+    } else {
+      setError('Code de vérification incorrect.');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
+      {/* Background Orbs */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px]"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
 
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in duration-500">
         <div className="bg-indigo-600 p-8 text-white text-center">
-          <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md">
-            <i className="fas fa-city text-4xl"></i>
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md">
+            <i className="fas fa-city text-3xl"></i>
           </div>
-          <h1 className="text-3xl font-bold">SyndicPro</h1>
-          <p className="text-indigo-100 mt-2 opacity-80">Gestion de Copropriété</p>
+          <h1 className="text-2xl font-black tracking-tight">SyndicPro Manager</h1>
+          <p className="text-indigo-100 text-xs mt-1 font-medium opacity-80 uppercase tracking-widest">Portail de Copropriété</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <div className="flex border-b">
+          <button 
+            onClick={() => { setActiveTab('syndic'); setStep(1); setError(''); }}
+            className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'syndic' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Espace Syndic
+          </button>
+          <button 
+            onClick={() => { setActiveTab('owner'); setStep(1); setError(''); }}
+            className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owner' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Espace Propriétaire
+          </button>
+        </div>
+
+        <div className="p-8">
           {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-shake">
-              <i className="fas fa-exclamation-triangle"></i>
-              Identifiants incorrects. Veuillez réessayer.
+            <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+              <i className="fas fa-exclamation-circle"></i> {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Utilisateur</label>
-              <div className="relative">
-                <i className="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input 
-                  type="text" 
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  placeholder="admin"
-                />
+          {activeTab === 'syndic' ? (
+            <form onSubmit={handleSyndicLogin} className="space-y-5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identifiant</label>
+                <div className="relative">
+                  <i className="fas fa-user-shield absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                  <input type="text" required value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium" placeholder="Ex: admin" />
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Mot de passe</label>
-              <div className="relative">
-                <i className="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input 
-                  type="password" 
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  placeholder="••••••••"
-                />
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mot de passe</label>
+                <div className="relative">
+                  <i className="fas fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium" placeholder="••••••••" />
+                </div>
               </div>
+              <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest mt-4">
+                Connexion Syndic <i className="fas fa-chevron-right text-[10px]"></i>
+              </button>
+            </form>
+          ) : (
+            <div className="space-y-5">
+              {step === 1 ? (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sélectionner votre Lot</label>
+                    <div className="relative">
+                      <i className="fas fa-door-closed absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
+                      <select 
+                        value={selectedAptId} 
+                        onChange={e => setSelectedAptId(e.target.value)} 
+                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium appearance-none"
+                      >
+                        <option value="">Choisir un appartement...</option>
+                        {sortedApartments.map(apt => (
+                          <option key={apt.id} value={apt.id}>
+                            Lot {apt.number} - {apt.owner}
+                          </option>
+                        ))}
+                        {sortedApartments.length === 0 && (
+                          <option disabled>Aucun appartement configuré</option>
+                        )}
+                      </select>
+                      <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">N° Téléphone</label>
+                    <div className="relative">
+                      <i className="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium" placeholder="Ex: 06 12 34 56 78" />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleSendOtp} 
+                    disabled={!selectedAptId || sortedApartments.length === 0}
+                    className="w-full bg-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-green-100 hover:bg-green-700 disabled:bg-slate-200 disabled:shadow-none transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest mt-4"
+                  >
+                    Recevoir le code <i className="fab fa-whatsapp"></i>
+                  </button>
+                  {sortedApartments.length === 0 && (
+                    <p className="text-[10px] text-amber-600 font-bold text-center">
+                      <i className="fas fa-info-circle"></i> Le syndic doit d'abord configurer l'immeuble.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 font-medium">Un code de vérification a été simulé pour votre mobile.</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block">Saisir le code à 6 chiffres</label>
+                    <input 
+                      type="text" 
+                      maxLength={6} 
+                      value={enteredOtp} 
+                      onChange={e => setEnteredOtp(e.target.value)}
+                      className="w-full text-center text-3xl font-black tracking-[1rem] py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" 
+                    />
+                  </div>
+                  <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest">
+                    Vérifier & Entrer
+                  </button>
+                  <button onClick={() => { setStep(1); setEnteredOtp(''); }} className="w-full text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest">
+                    Modifier les informations
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-          >
-            Se connecter
-            <i className="fas fa-arrow-right text-sm"></i>
-          </button>
-
-          <div className="pt-4 text-center">
-            <p className="text-xs text-slate-400">
-              Oublié vos accès ? Contactez l'administrateur système.
-            </p>
-          </div>
-        </form>
+          )}
+        </div>
+        <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">SyndicPro Manager © 2024 - Sécurisé par chiffrement local</p>
+        </div>
       </div>
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .animate-shake { animation: shake 0.3s ease-in-out 0s 2; }
-      `}</style>
     </div>
   );
 };
