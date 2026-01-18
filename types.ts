@@ -6,6 +6,23 @@ export interface User {
   apartmentId?: string; // Lié si c'est un propriétaire
 }
 
+export interface Attachment {
+  name: string;
+  data: string; // Base64
+  type: string; // mimeType
+}
+
+export interface ProfileRequest {
+  id: string;
+  apartmentId: string;
+  apartmentNumber: string;
+  ownerName: string;
+  currentPhone: string;
+  newPhone: string;
+  date: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 export interface BuildingInfo {
   name: string;
   address: string;
@@ -19,6 +36,7 @@ export interface BuildingInfo {
   reminderLanguage: 'ar' | 'fr';
   whatsappTemplate?: string;
   whatsappDetailedTemplate?: string;
+  lastSyncDate?: string; // Date de la dernière synchro cloud
 }
 
 export interface ReminderLog {
@@ -82,11 +100,14 @@ export interface Project {
   id: string;
   title: string;
   description: string;
+  expectedResult?: string; 
+  endDate?: string; 
   status: 'planned' | 'in-progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   estimatedBudget?: number;
-  authorId: string; // 'admin' ou apartmentId
+  authorId: string; 
   authorName: string;
+  attachments?: Attachment[]; 
 }
 
 export interface Complaint {
@@ -95,9 +116,11 @@ export interface Complaint {
   apartmentNumber: string;
   date: string;
   description: string;
+  category: ExpenseCategory; 
   status: 'open' | 'pending' | 'resolved';
   priority: 'low' | 'medium' | 'high';
   authorName: string;
+  attachments?: Attachment[]; 
 }
 
 export interface Payment {

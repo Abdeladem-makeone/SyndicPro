@@ -14,18 +14,18 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color }) => {
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-shadow">
+    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
       <div className="min-w-0">
-        <p className="text-[10px] sm:text-sm text-slate-500 font-bold uppercase tracking-wider">{title}</p>
-        <h3 className="text-lg sm:text-2xl font-black mt-1 text-slate-800 truncate">{value}</h3>
+        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mb-1.5">{title}</p>
+        <h3 className="text-2xl font-black text-slate-800 tracking-tight truncate">{value}</h3>
         {trend && (
-          <p className={`text-[10px] mt-2 flex items-center gap-1 font-bold ${trend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-            <i className={`fas fa-arrow-${trend.isUp ? 'up' : 'down'}`}></i>
-            {trend.value}% vs mois dernier
+          <p className={`text-[10px] mt-3 flex items-center gap-1.5 font-black uppercase tracking-wider ${trend.isUp ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <i className={`fas fa-caret-${trend.isUp ? 'up' : 'down'}`}></i>
+            {trend.value}% <span className="opacity-50">vs mois d'avant</span>
           </p>
         )}
       </div>
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${color} flex items-center justify-center text-lg sm:text-xl flex-shrink-0 ml-2`}>
+      <div className={`w-14 h-14 rounded-3xl ${color} flex items-center justify-center text-xl flex-shrink-0 ml-4 group-hover:scale-110 transition-transform shadow-inner`}>
         <i className={`fas ${icon}`}></i>
       </div>
     </div>

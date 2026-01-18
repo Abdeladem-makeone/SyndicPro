@@ -44,12 +44,10 @@ const Reports: React.FC<ReportsProps> = ({ apartments, expenses, payments, build
     const categories = expenses
       .filter(e => new Date(e.date).getFullYear() === selectedYear && !e.excludedFromReports)
       .reduce((acc: Record<string, number>, e: Expense) => {
-        // Explicitly typed accumulator and expense to fix numeric context errors
         acc[e.category] = (acc[e.category] || 0) + e.amount;
         return acc;
       }, {} as Record<string, number>);
 
-    // Explicitly casting Object.values to number[] to fix 'unknown' arithmetic errors
     const totalExp = (Object.values(categories) as number[]).reduce((a: number, b: number) => a + b, 0);
     const expenseBreakdown = (Object.entries(categories) as [string, number][]).map(([name, value]) => ({
       name,

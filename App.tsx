@@ -11,12 +11,13 @@ import BuildingSetup from './pages/BuildingSetup';
 import FollowUp from './pages/FollowUp';
 import ReminderCenter from './pages/ReminderCenter';
 import AssetsManager from './pages/AssetsManager';
+import OwnerDashboard from './pages/OwnerDashboard';
+import OwnerProfile from './pages/OwnerProfile';
 import Login from './pages/Login';
-import { Apartment, Expense, Payment, BuildingInfo, Project, Complaint, User, ReminderLog, BuildingAsset, AssetPayment } from './types';
+import { Apartment, Expense, Payment, BuildingInfo, Project, Complaint, User, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest } from './types';
 import { INITIAL_EXPENSES } from './constants';
 import { storage } from './utils/storage';
-import { requestNotificationPermission, sendLocalNotification } from './utils/notificationUtils';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -36,18 +37,30 @@ const App: React.FC = () => {
 
   const [apartments, setApartments] = useState<Apartment[]>(() => storage.loadBuildingData().apartments || []);
   const [assets, setAssets] = useState<BuildingAsset[]>(() => storage.loadAssets());
-  
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const data = storage.loadAllYearlyData();
-    return data.expenses.length > 0 ? data.expenses : INITIAL_EXPENSES;
-  });
-
+  const [expenses, setExpenses] = useState<Expense[]>(() => storage.loadAllYearlyData().expenses.length > 0 ? storage.loadAllYearlyData().expenses : INITIAL_EXPENSES);
   const [payments, setPayments] = useState<Payment[]>(() => storage.loadAllYearlyData().payments || []);
   const [assetPayments, setAssetPayments] = useState<AssetPayment[]>(() => storage.loadAllYearlyData().assetPayments || []);
-
   const [projects, setProjects] = useState<Project[]>(() => storage.loadOperations().projects || []);
   const [complaints, setComplaints] = useState<Complaint[]>(() => storage.loadOperations().complaints || []);
   const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>(() => storage.loadReminders());
+  const [profileRequests, setProfileRequests] = useState<ProfileRequest[]>(() => {
+    const saved = localStorage.getItem('syndic_profile_requests');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const performGlobalSave = useCallback(() => {
+    try {
+      storage.saveBuildingData(buildingInfo, apartments);
+      const years = new Set([...payments.map(p => p.year), new Date().getFullYear()]);
+      years.forEach(year => storage.saveYearlyFinance(year, payments, expenses, assetPayments));
+      storage.saveAssets(assets);
+      storage.saveOperations(projects, complaints);
+      storage.saveReminders(reminderHistory);
+      localStorage.setItem('syndic_profile_requests', JSON.stringify(profileRequests));
+    } catch (error) {
+      console.error("[STORAGE ERROR]", error);
+    }
+  }, [buildingInfo, apartments, payments, expenses, assetPayments, assets, projects, complaints, reminderHistory, profileRequests]);
 
   const handleLogin = (user: User) => {
     localStorage.setItem('syndic_session', JSON.stringify(user));
@@ -55,7 +68,13 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // 1. Sauvegarde silencieuse
+    performGlobalSave();
+    
+    // 2. Nettoyage radical de la session
     localStorage.removeItem('syndic_session');
+    
+    // 3. Reset React State
     setCurrentUser(null);
   };
 
@@ -63,109 +82,72 @@ const App: React.FC = () => {
     setBuildingInfo(info);
     if (newApartments) {
       setApartments(newApartments);
+      storage.saveBuildingData(info, newApartments);
+    } else {
+      storage.saveBuildingData(info, apartments);
     }
   };
 
-  // SAUVEGARDE AUTOMATIQUE
-  useEffect(() => {
-    if (buildingInfo.isConfigured) storage.saveBuildingData(buildingInfo, apartments);
-  }, [buildingInfo, apartments]);
+  const handleHandleProfileRequest = (requestId: string, approved: boolean) => {
+    const req = profileRequests.find(r => r.id === requestId);
+    if (!req) return;
+    if (approved) {
+      const updatedApts = apartments.map(a => a.id === req.apartmentId ? { ...a, phone: req.newPhone } : a);
+      setApartments(updatedApts);
+      setProfileRequests(prev => prev.filter(r => r.id !== requestId));
+    } else {
+      setProfileRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
+    }
+  };
 
-  useEffect(() => { storage.saveAssets(assets); }, [assets]);
-  useEffect(() => { storage.saveOperations(projects, complaints); }, [projects, complaints]);
-  useEffect(() => { storage.saveReminders(reminderHistory); }, [reminderHistory]);
-
   useEffect(() => {
-    const years = new Set([...payments.map(p => p.year), new Date().getFullYear()]);
-    years.forEach(year => storage.saveYearlyFinance(year, payments, expenses, assetPayments));
-  }, [payments, expenses, assetPayments]);
+    if (buildingInfo.isConfigured) performGlobalSave();
+  }, [buildingInfo, apartments, assets, expenses, payments, assetPayments, projects, complaints, reminderHistory, profileRequests, performGlobalSave]);
 
   if (!currentUser) return <Login apartments={apartments} onLogin={handleLogin} />;
 
   const isAdmin = currentUser.role === 'admin';
+  const badgeCounts = {
+    owners: profileRequests.filter(r => r.status === 'pending').length,
+    followup: complaints.filter(c => c.status === 'open').length + projects.filter(p => p.status === 'planned').length
+  };
 
   return (
     <HashRouter>
-      <Layout onLogout={handleLogout} currentUser={currentUser.username} role={currentUser.role}>
+      <Layout 
+        onLogout={handleLogout} 
+        currentUser={currentUser.username} 
+        role={currentUser.role}
+        badges={isAdmin ? badgeCounts : undefined}
+      >
         <Routes>
-          <Route path="/" element={
-            isAdmin 
-              ? (buildingInfo.isConfigured ? <Dashboard apartments={apartments} expenses={expenses} payments={payments} assetPayments={assetPayments} buildingInfo={buildingInfo} /> : <Navigate to="/setup" replace />)
-              : <Navigate to="/followup" replace />
-          } />
-          
-          <Route path="/followup" element={
-            <FollowUp 
-              apartments={apartments} 
-              projects={projects} 
-              complaints={complaints} 
-              currentUser={currentUser}
-              onAddProject={p => setProjects([...projects, p])} 
-              onUpdateProject={u => setProjects(projects.map(p => p.id === u.id ? u : p))} 
-              onDeleteProject={id => setProjects(projects.filter(p => p.id !== id))} 
-              onAddComplaint={c => setComplaints([...complaints, c])} 
-              onUpdateComplaint={u => setComplaints(complaints.map(c => c.id === u.id ? u : c))} 
-              onDeleteComplaint={id => setComplaints(complaints.filter(c => c.id !== id))} 
-              buildingName={buildingInfo.name} 
-            />
-          } />
-
+          <Route path="/" element={isAdmin ? (buildingInfo.isConfigured ? <Dashboard apartments={apartments} expenses={expenses} payments={payments} assetPayments={assetPayments} buildingInfo={buildingInfo} /> : <Navigate to="/setup" replace />) : <Navigate to="/cash-state" replace />} />
+          <Route path="/followup" element={<FollowUp apartments={apartments} projects={projects} complaints={complaints} currentUser={currentUser} onAddProject={p => setProjects([...projects, p])} onUpdateProject={u => setProjects(projects.map(p => p.id === u.id ? u : p))} onDeleteProject={id => setProjects(projects.filter(p => p.id !== id))} onAddComplaint={c => setComplaints([...complaints, c])} onUpdateComplaint={u => setComplaints(complaints.map(c => c.id === u.id ? u : c))} onDeleteComplaint={id => setComplaints(complaints.filter(c => c.id !== id))} buildingName={buildingInfo.name} />} />
           {!isAdmin && (
-            <Route path="/cash-state" element={
-              <div className="space-y-8">
-                 <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Solde Actuel de la Copropriété</p>
-                    <p className="text-4xl font-black text-indigo-600">
-                       {(payments.reduce((s,p) => s+p.amount, 0) + assetPayments.reduce((s,p) => s+p.amount, 0) - expenses.filter(e => !e.excludedFromReports).reduce((s,e) => s+e.amount, 0)).toLocaleString()} DH
-                    </p>
-                 </div>
-                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b bg-slate-50">
-                       <h3 className="text-sm font-black text-slate-800 uppercase">Dernières Dépenses (Transparence)</h3>
-                    </div>
-                    <table className="w-full text-left">
-                       <thead className="bg-slate-50 border-b">
-                          <tr className="text-[10px] font-bold text-slate-400 uppercase">
-                             <th className="px-6 py-4">Date</th>
-                             <th className="px-6 py-4">Désignation</th>
-                             <th className="px-6 py-4 text-right">Montant</th>
-                          </tr>
-                       </thead>
-                       <tbody className="divide-y divide-slate-50">
-                          {expenses.filter(e => !e.excludedFromReports).slice().reverse().slice(0, 20).map(e => (
-                             <tr key={e.id} className="text-sm">
-                                <td className="px-6 py-4 text-slate-500">{new Date(e.date).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 font-bold">{e.description}</td>
-                                <td className="px-6 py-4 text-right font-black text-red-500">-{e.amount.toLocaleString()} DH</td>
-                             </tr>
-                          ))}
-                       </tbody>
-                    </table>
-                 </div>
-              </div>
-            } />
+            <>
+              <Route path="/cash-state" element={<OwnerDashboard apartment={apartments.find(a => a.id === currentUser.apartmentId) || apartments[0]} expenses={expenses} payments={payments} assetPayments={assetPayments} reminderHistory={reminderHistory} />} />
+              <Route path="/profile" element={<OwnerProfile apartment={apartments.find(a => a.id === currentUser.apartmentId) || apartments[0]} onUpdateApt={u => setApartments(apartments.map(a => a.id === u.id ? u : a))} onRequestPhoneChange={req => setProfileRequests([...profileRequests, { ...req, status: 'pending' }])} pendingRequests={profileRequests} onDismissRequest={id => setProfileRequests(prev => prev.filter(r => r.id !== id))} />} />
+            </>
           )}
-
           {isAdmin && (
             <>
               <Route path="/assets" element={<AssetsManager assets={assets} assetPayments={assetPayments} onAddAsset={a => setAssets([...assets, a])} onUpdateAsset={ua => setAssets(assets.map(a => a.id === ua.id ? ua : a))} onDeleteAsset={id => setAssets(assets.filter(a => a.id !== id))} onAddPayment={ap => setAssetPayments([...assetPayments, ap])} onDeletePayment={pid => setAssetPayments(assetPayments.filter(p => p.id !== pid))} />} />
-              <Route path="/setup" element={<BuildingSetup buildingInfo={buildingInfo} onSave={handleSaveBuilding} onImportFullDB={d => { if(d.core) { setBuildingInfo(d.core.building); setApartments(d.core.apartments); } }} fullData={storage.getFullExport()} currentApartmentsCount={apartments.length} />} />
+              <Route path="/setup" element={<BuildingSetup buildingInfo={buildingInfo} onSave={handleSaveBuilding} onImportFullDB={d => { if(d.data && d.data.building) { setBuildingInfo(d.data.building.building); setApartments(d.data.building.apartments); } }} fullData={storage.getFullExport()} currentApartmentsCount={apartments.length} />} />
               <Route path="/reminders" element={<ReminderCenter apartments={apartments} payments={payments} buildingInfo={buildingInfo} onUpdateBuilding={setBuildingInfo} reminderHistory={reminderHistory} onAddReminderLog={l => setReminderHistory([...reminderHistory, l])} onClearHistory={() => setReminderHistory([])} />} />
               <Route path="/apartments" element={<Apartments apartments={apartments} payments={payments} buildingInfo={buildingInfo} onUpdate={u => setApartments(apartments.map(a => a.id === u.id ? u : a))} onAdd={n => setApartments([...apartments, n])} onDelete={id => setApartments(apartments.filter(a => a.id !== id))} />} />
-              <Route path="/owners" element={<Owners apartments={apartments} onUpdate={u => setApartments(apartments.map(a => a.id === u.id ? u : a))} />} />
+              <Route path="/owners" element={<Owners apartments={apartments} onUpdate={u => setApartments(apartments.map(a => a.id === u.id ? u : a))} profileRequests={profileRequests.filter(r => r.status === 'pending')} onHandleProfileRequest={handleHandleProfileRequest} />} />
               <Route path="/expenses" element={<Expenses expenses={expenses} onAdd={e => setExpenses([...expenses, e])} onUpdate={u => setExpenses(expenses.map(ex => ex.id === u.id ? u : ex))} onDelete={id => setExpenses(expenses.filter(e => e.id !== id))} />} />
               <Route path="/payments" element={<Payments apartments={apartments} payments={payments} buildingInfo={buildingInfo} onTogglePayment={(aid, m, y) => {
-                const ex = payments.find(p => p.apartmentId === aid && p.month === m && p.year === y);
-                if (ex) setPayments(payments.filter(p => p.id !== ex.id));
-                else {
+                setPayments(prev => {
+                  const ex = prev.find(p => p.apartmentId === aid && p.month === m && p.year === y);
+                  if (ex) return prev.filter(p => p.id !== ex.id);
                   const apt = apartments.find(a => a.id === aid);
-                  setPayments([...payments, { id: Date.now().toString(), apartmentId: aid, month: m, year: y, amount: apt?.monthlyFee || 0, paidDate: new Date().toISOString() }]);
-                }
+                  return [...prev, { id: `pay-${Date.now()}-${aid}-${m}`, apartmentId: aid, month: m, year: y, amount: apt?.monthlyFee || 0, paidDate: new Date().toISOString() }];
+                });
               }} />} />
               <Route path="/reports" element={<Reports apartments={apartments} expenses={expenses} payments={payments} buildingInfo={buildingInfo} />} />
             </>
           )}
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

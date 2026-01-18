@@ -30,6 +30,8 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
   const [formData, setFormData] = useState<Partial<Expense>>({
     date: new Date().toISOString().split('T')[0],
     category: ExpenseCategory.OTHER,
+    description: '',
+    amount: 0,
     excludedFromReports: false,
   });
 
@@ -64,12 +66,25 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
   }, [filteredExpenses]);
 
   const handleSave = () => {
-    const newExpense = { ...formData, id: Date.now().toString() } as Expense;
+    if (!formData.description || !formData.amount || formData.amount <= 0) {
+      alert("Veuillez remplir correctement la description et le montant.");
+      return;
+    }
+
+    const newExpense = { 
+      ...formData, 
+      id: Date.now().toString() 
+    } as Expense;
+    
     onAdd(newExpense);
     setShowModal(false);
+    
+    // Reset form
     setFormData({
       date: new Date().toISOString().split('T')[0],
       category: ExpenseCategory.OTHER,
+      description: '',
+      amount: 0,
       excludedFromReports: false,
     });
   };
@@ -94,7 +109,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
   const CHART_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#64748b'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Gestion des Dépenses</h2>
@@ -117,7 +132,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 overflow-hidden min-w-0">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <i className="fas fa-chart-bar text-indigo-500"></i> Répartition par Catégorie
@@ -141,7 +156,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
             </div>
           </div>
           
-          <div className="h-64 w-full">
+          <div className="h-64 w-full relative min-w-0">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
@@ -179,7 +194,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
           </div>
         </div>
 
-        <div className="bg-indigo-600 p-6 rounded-2xl text-white shadow-lg flex flex-col justify-center">
+        <div className="bg-indigo-600 p-6 rounded-2xl text-white shadow-lg flex flex-col justify-center min-w-0">
            <h4 className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">Total Période</h4>
            <p className="text-3xl font-black mb-4">
              {filteredExpenses.filter(e => !e.excludedFromReports).reduce((sum, e) => sum + e.amount, 0).toLocaleString()} <span className="text-lg">DH</span>
@@ -219,6 +234,88 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
           </table>
         </div>
       </div>
+
+      {/* MODAL DE CREATION DE DEPENSE CORRIGÉ */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-8 sm:p-10 space-y-6 animate-in zoom-in duration-200">
+            <h3 className="text-2xl font-black text-slate-800">Nouvelle Dépense</h3>
+            
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Désignation / Objet</label>
+                <input 
+                  type="text" 
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                  placeholder="Ex: Facture électricité communs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Montant (DH)</label>
+                  <input 
+                    type="number" 
+                    value={formData.amount || ''}
+                    onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value) || 0})}
+                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-black text-indigo-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                  <input 
+                    type="date" 
+                    value={formData.date}
+                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie</label>
+                <select 
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value as ExpenseCategory})}
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Object.values(ExpenseCategory).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input 
+                  type="checkbox" 
+                  id="exclude"
+                  checked={formData.excludedFromReports}
+                  onChange={(e) => setFormData({...formData, excludedFromReports: e.target.checked})}
+                  className="w-5 h-5 text-indigo-600 rounded-lg"
+                />
+                <label htmlFor="exclude" className="text-xs font-bold text-slate-600">Exclure cette dépense du bilan financier</label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button 
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-4 text-xs font-black text-slate-400 hover:bg-slate-50 rounded-2xl border transition-all uppercase tracking-widest"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={handleSave}
+                className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all uppercase tracking-widest"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

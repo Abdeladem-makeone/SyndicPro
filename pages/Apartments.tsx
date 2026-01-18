@@ -15,7 +15,9 @@ interface ApartmentsProps {
 type SortField = 'number' | 'owner' | 'monthlyFee';
 type SortOrder = 'asc' | 'desc';
 
-const Apartments: React.FC<ApartmentsProps> = ({ apartments, payments, buildingInfo, onUpdate, onAdd, onDelete }) => {
+const Apartments: React.FC<ApartmentsProps> = ({ 
+  apartments, payments, buildingInfo, onUpdate, onAdd, onDelete 
+}) => {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState<Partial<Apartment>>({});
@@ -88,11 +90,11 @@ const Apartments: React.FC<ApartmentsProps> = ({ apartments, payments, buildingI
   };
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-10 w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-widest">Liste des Lots</h2>
-          <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Gestion de la structure de l'immeuble</p>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-widest">Gestion du Parc</h2>
+          <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Configuration technique des appartements</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button 
@@ -119,7 +121,7 @@ const Apartments: React.FC<ApartmentsProps> = ({ apartments, payments, buildingI
                   className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:bg-slate-100 transition-colors"
                   onClick={() => handleSort('number')}
                 >
-                  Lot <SortIndicator field="number" />
+                  Appartement <SortIndicator field="number" />
                 </th>
                 <th 
                   className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:bg-slate-100 transition-colors"
@@ -171,7 +173,7 @@ const Apartments: React.FC<ApartmentsProps> = ({ apartments, payments, buildingI
                           <i className="fas fa-edit"></i>
                         </button>
                         <button 
-                          onClick={() => { if(confirm('Supprimer ce lot ?')) onDelete(apt.id); }}
+                          onClick={() => { if(confirm('Supprimer cet appartement ?')) onDelete(apt.id); }}
                           className="w-9 h-9 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-xl transition-all"
                         >
                           <i className="fas fa-trash-alt"></i>
@@ -200,12 +202,12 @@ const Apartments: React.FC<ApartmentsProps> = ({ apartments, payments, buildingI
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-6 sm:p-10 space-y-8 animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto no-scrollbar">
             <h3 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
-              {isEditing ? `Modifier Lot ${formData.number}` : 'Nouveau Lot'}
+              {isEditing ? `Modifier Appartement ${formData.number}` : 'Nouvel Appartement'}
             </h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Numéro du Lot</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Numéro de l'Appartement</label>
                 <input 
                   type="text" 
                   value={formData.number || ''}

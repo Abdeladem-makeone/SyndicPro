@@ -46,7 +46,7 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
     const inputPhone = normalizePhone(phone);
 
     if (!selectedAptId || !inputPhone) {
-      setError('Veuillez sélectionner votre lot et saisir votre téléphone.');
+      setError('Veuillez sélectionner votre appartement et saisir votre téléphone.');
       return;
     }
 
@@ -67,9 +67,9 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
         
         // Simulation d'envoi
         console.log(`CODE OTP pour ${apt.owner}: ${otp}`);
-        alert(`Simulation WhatsApp pour ${apt.owner} (Lot ${apt.number}) :\n\n"Votre code d'accès SyndicPro est : ${otp}"`);
+        alert(`Simulation WhatsApp pour ${apt.owner} (Appartement ${apt.number}) :\n\n"Votre code d'accès SyndicPro est : ${otp}"`);
       } else {
-        setError("Le numéro de téléphone ne correspond pas à celui enregistré pour ce lot.");
+        setError("Le numéro de téléphone ne correspond pas à celui enregistré pour cet appartement.");
         setTimeout(() => setError(''), 4000);
       }
     } else {
@@ -154,7 +154,7 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
               {step === 1 ? (
                 <>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sélectionner votre Lot</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sélectionner votre Appartement</label>
                     <div className="relative">
                       <i className="fas fa-door-closed absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
                       <select 
@@ -165,7 +165,7 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
                         <option value="">Choisir un appartement...</option>
                         {sortedApartments.map(apt => (
                           <option key={apt.id} value={apt.id}>
-                            Lot {apt.number} - {apt.owner}
+                            Appartement {apt.number} - {apt.owner}
                           </option>
                         ))}
                         {sortedApartments.length === 0 && (
