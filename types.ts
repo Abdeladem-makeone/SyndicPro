@@ -3,7 +3,8 @@ export interface User {
   id: string;
   username: string;
   role: 'admin' | 'owner';
-  apartmentId?: string; // Lié si c'est un propriétaire
+  apartmentId?: string;
+  language?: 'fr' | 'ar';
 }
 
 export interface Attachment {
@@ -36,7 +37,7 @@ export interface BuildingInfo {
   reminderLanguage: 'ar' | 'fr';
   whatsappTemplate?: string;
   whatsappDetailedTemplate?: string;
-  lastSyncDate?: string; // Date de la dernière synchro cloud
+  lastSyncDate?: string;
 }
 
 export interface ReminderLog {

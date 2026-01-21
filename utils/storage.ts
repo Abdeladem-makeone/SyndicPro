@@ -1,33 +1,38 @@
 
-import { BuildingInfo, Apartment, Expense, Payment, Project, Complaint, ReminderLog, BuildingAsset, AssetPayment } from '../types';
+import { BuildingInfo, Apartment, Expense, Payment, Project, Complaint, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest } from '../types';
 
+const STORAGE_PREFIX = 'syndic_v4_';
 const DATA_PATHS = {
-  BUILDING: 'data/building_info.json',
-  ASSETS: 'data/building_assets.json',
-  OPS: 'data/ops_projects_complaints.json',
-  REMINDERS: 'data/reminder_logs.json',
-  COTIS_PREFIX: 'data/cotis_',
-  ASSET_PAY_PREFIX: 'data/asset_pay_',
+  BUILDING: 'syndic_storage/building_info.json',
+  ASSETS: 'syndic_storage/building_assets.json',
+  OPS: 'syndic_storage/ops_projects_complaints.json',
+  REMINDERS: 'syndic_storage/reminder_logs.json',
+  PROFILE_REQS: 'syndic_storage/profile_requests.json',
+  COTIS_PREFIX: 'syndic_storage/cotis_',
+  ASSET_PAY_PREFIX: 'syndic_storage/asset_pay_',
 };
 
 const safeSetItem = (key: string, value: string) => {
   try {
-    localStorage.setItem(key, value);
+    localStorage.setItem(STORAGE_PREFIX + key, value);
   } catch (e) {
-    if (e instanceof DOMException && (e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-      alert("⚠️ Stockage plein : Les données n'ont pas pu être totalement sauvegardées.");
+    if (e instanceof DOMException) {
+      alert("⚠️ Stockage plein : Impossible d'enregistrer les fichiers joints (trop volumineux pour le navigateur).");
     }
   }
 };
 
+const safeGetItem = (key: string) => localStorage.getItem(STORAGE_PREFIX + key);
+
 export const storage = {
-  exists: () => localStorage.getItem(DATA_PATHS.BUILDING) !== null,
+  exists: () => safeGetItem(DATA_PATHS.BUILDING) !== null,
 
   initialize: (building: BuildingInfo, apartments: Apartment[]) => {
     safeSetItem(DATA_PATHS.BUILDING, JSON.stringify({ building, apartments, created: new Date().toISOString() }));
     safeSetItem(DATA_PATHS.ASSETS, JSON.stringify({ assets: [], created: new Date().toISOString() }));
     safeSetItem(DATA_PATHS.OPS, JSON.stringify({ projects: [], complaints: [], created: new Date().toISOString() }));
     safeSetItem(DATA_PATHS.REMINDERS, JSON.stringify([]));
+    safeSetItem(DATA_PATHS.PROFILE_REQS, JSON.stringify([]));
   },
 
   saveBuildingData: (building: BuildingInfo, apartments: Apartment[]) => {
@@ -35,7 +40,7 @@ export const storage = {
   },
 
   loadBuildingData: () => {
-    const data = localStorage.getItem(DATA_PATHS.BUILDING);
+    const data = safeGetItem(DATA_PATHS.BUILDING);
     return data ? JSON.parse(data) : { building: null, apartments: [] };
   },
 
@@ -44,7 +49,7 @@ export const storage = {
   },
 
   loadAssets: (): BuildingAsset[] => {
-    const data = localStorage.getItem(DATA_PATHS.ASSETS);
+    const data = safeGetItem(DATA_PATHS.ASSETS);
     return data ? JSON.parse(data).assets || [] : [];
   },
 
@@ -53,8 +58,17 @@ export const storage = {
   },
 
   loadOperations: () => {
-    const data = localStorage.getItem(DATA_PATHS.OPS);
+    const data = safeGetItem(DATA_PATHS.OPS);
     return data ? JSON.parse(data) : { projects: [], complaints: [] };
+  },
+
+  saveProfileRequests: (reqs: ProfileRequest[]) => {
+    safeSetItem(DATA_PATHS.PROFILE_REQS, JSON.stringify(reqs));
+  },
+
+  loadProfileRequests: (): ProfileRequest[] => {
+    const data = safeGetItem(DATA_PATHS.PROFILE_REQS);
+    return data ? JSON.parse(data) : [];
   },
 
   saveYearlyFinance: (year: number, payments: Payment[], expenses: Expense[], assetPayments: AssetPayment[]) => {
@@ -72,12 +86,12 @@ export const storage = {
     const allAssetPayments: AssetPayment[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith(DATA_PATHS.COTIS_PREFIX)) {
+      if (key?.startsWith(STORAGE_PREFIX + DATA_PATHS.COTIS_PREFIX)) {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
         if (data.payments) allPayments.push(...data.payments);
         if (data.expenses) allExpenses.push(...data.expenses);
       }
-      if (key?.startsWith(DATA_PATHS.ASSET_PAY_PREFIX)) {
+      if (key?.startsWith(STORAGE_PREFIX + DATA_PATHS.ASSET_PAY_PREFIX)) {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
         if (data.payments) allAssetPayments.push(...data.payments);
       }
@@ -90,19 +104,67 @@ export const storage = {
   },
 
   loadReminders: () => {
-    const data = localStorage.getItem(DATA_PATHS.REMINDERS);
+    const data = safeGetItem(DATA_PATHS.REMINDERS);
     return data ? JSON.parse(data) : [];
   },
 
-  getFullExport: () => ({
-    version: "4.0",
-    exportDate: new Date().toISOString(),
-    data: {
-      building: storage.loadBuildingData(),
-      assets: storage.loadAssets(),
-      operations: storage.loadOperations(),
-      finances: storage.loadAllYearlyData(),
-      reminders: storage.loadReminders()
+  getFullExport: () => {
+    const fullData: Record<string, any> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) {
+        const cleanKey = key.replace(STORAGE_PREFIX, '');
+        fullData[cleanKey] = JSON.parse(localStorage.getItem(key) || 'null');
+      }
     }
-  })
+    return {
+      appName: "SyndicPro Manager",
+      version: "4.1",
+      exportDate: new Date().toISOString(),
+      storage: fullData
+    };
+  },
+
+  importFullData: (jsonStr: string) => {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed.storage) throw new Error("Format invalide.");
+      
+      const keysToDelete = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(STORAGE_PREFIX)) keysToDelete.push(key);
+      }
+      keysToDelete.forEach(k => localStorage.removeItem(k));
+
+      Object.entries(parsed.storage).forEach(([key, value]) => {
+        localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  getVirtualFiles: () => {
+    const files = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) {
+        const fileName = key.replace(STORAGE_PREFIX, '');
+        const size = (localStorage.getItem(key)?.length || 0) / 1024;
+        files.push({ name: fileName, size });
+      }
+    }
+    return files.sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  formatStorage: () => {
+    const keysToDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) keysToDelete.push(key);
+    }
+    keysToDelete.forEach(k => localStorage.removeItem(k));
+  }
 };
