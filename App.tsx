@@ -47,7 +47,7 @@ const App: React.FC = () => {
   const [buildingInfo, setBuildingInfo] = useState<BuildingInfo>({
     name: '', address: '', totalUnits: 0, unitsPerFloor: 0, numFloors: 0, 
     defaultMonthlyFee: 50, isConfigured: false, autoRemindersEnabled: false, 
-    notificationsEnabled: false, reminderLanguage: 'fr'
+    notificationsEnabled: false, reminderLanguage: 'fr', ownerInterfaceEnabled: false
   });
   const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>([]);
 
@@ -59,7 +59,11 @@ const App: React.FC = () => {
     const buildingAssets = storage.loadAssets();
     const reqs = storage.loadProfileRequests();
 
-    if (building) setBuildingInfo(building);
+    if (building) {
+        // Migration: ensure property exists if not present in storage. Default to false as requested.
+        if (building.ownerInterfaceEnabled === undefined) building.ownerInterfaceEnabled = false;
+        setBuildingInfo(building);
+    }
     setApartments(apts || []);
     setProjects(proj || []);
     setComplaints(comp || []);
@@ -149,10 +153,26 @@ const App: React.FC = () => {
     storage.saveProfileRequests(nextReqs);
   };
 
-  if (!currentUser) return <Login apartments={apartments} onLogin={handleLogin} />;
+  if (!currentUser) return <Login apartments={apartments} buildingInfo={buildingInfo} onLogin={handleLogin} />;
 
   const isAdmin = currentUser.role === 'admin';
   const myApartment = !isAdmin ? apartments.find(a => a.id === currentUser.apartmentId) : null;
+
+  // Si l'utilisateur est un propriétaire mais que l'interface est désactivée, on le déconnecte ou on le bloque
+  if (!isAdmin && !buildingInfo.ownerInterfaceEnabled) {
+      return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div className="bg-white p-10 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm">
+                <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-full flex items-center justify-center mx-auto text-2xl">
+                    <i className="fas fa-lock"></i>
+                </div>
+                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Accès Désactivé</h2>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Le gestionnaire a temporairement désactivé l'accès propriétaire. Veuillez réessayer plus tard.</p>
+                <button onClick={handleLogout} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Retour</button>
+            </div>
+        </div>
+      );
+  }
 
   return (
     <HashRouter>

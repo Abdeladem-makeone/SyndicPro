@@ -38,6 +38,7 @@ export interface BuildingInfo {
   whatsappTemplate?: string;
   whatsappDetailedTemplate?: string;
   lastSyncDate?: string;
+  ownerInterfaceEnabled: boolean;
 }
 
 export interface ReminderLog {

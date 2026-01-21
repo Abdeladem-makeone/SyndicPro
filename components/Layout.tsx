@@ -187,7 +187,8 @@ const Layout: React.FC<LayoutProps> = ({
            <div className="p-8">{children}</div>
         </main>
 
-        {showLogoutModal && renderLogoutModal(confirmLogout, () => setShowLogoutModal(false), t.logout)}
+        {/* Fix: Passed the missing isAr argument to renderLogoutModal to match its definition */}
+        {showLogoutModal && renderLogoutModal(confirmLogout, () => setShowLogoutModal(false), t.logout, isAr)}
       </div>
     );
   }
@@ -209,7 +210,7 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900 leading-none">SyndicPro</h1>
-              <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1 opacity-70">
+              <p className={`font-black text-teal-600 uppercase tracking-widest mt-1 opacity-70 ${isAr ? 'text-sm' : 'text-[10px]'}`}>
                 {t.welcome}, {currentUser}
               </p>
             </div>
@@ -218,7 +219,7 @@ const Layout: React.FC<LayoutProps> = ({
           <div className="flex items-center gap-4">
              <button 
               onClick={() => onLanguageToggle?.(isAr ? 'fr' : 'ar')}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-teal-50 text-teal-700 rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-slate-200"
+              className={`px-5 py-2.5 bg-slate-100 hover:bg-teal-50 text-teal-700 rounded-xl font-black uppercase tracking-widest transition-all border border-slate-200 ${isAr ? 'text-base' : 'text-xs'}`}
              >
                {t.langLabel}
              </button>
@@ -244,7 +245,7 @@ const Layout: React.FC<LayoutProps> = ({
                   }`}
                 >
                   <i className={`fas ${item.icon} text-lg ${location.pathname === item.path ? 'text-white' : 'text-teal-600 opacity-60'}`}></i>
-                  <span className="font-black text-sm uppercase tracking-widest">{item.label}</span>
+                  <span className={`font-black uppercase tracking-widest ${isAr ? 'text-lg' : 'text-sm'}`}>{item.label}</span>
                 </Link>
               ))}
            </div>
@@ -257,31 +258,31 @@ const Layout: React.FC<LayoutProps> = ({
          </div>
       </main>
 
-      {showLogoutModal && renderLogoutModal(confirmLogout, () => setShowLogoutModal(false), t.logout)}
+      {showLogoutModal && renderLogoutModal(confirmLogout, () => setShowLogoutModal(false), t.logout, isAr)}
     </div>
   );
 };
 
-const renderLogoutModal = (onConfirm: () => void, onCancel: () => void, label: string) => (
+const renderLogoutModal = (onConfirm: () => void, onCancel: () => void, label: string, isAr: boolean) => (
   <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onCancel}></div>
     <div className="bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl relative z-10 animate-in zoom-in duration-200 text-center border border-slate-100">
       <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-2xl mx-auto mb-5">
         <i className="fas fa-power-off"></i>
       </div>
-      <h3 className="text-xl font-black text-slate-800 mb-1 uppercase tracking-tight">{label} ?</h3>
+      <h3 className={`font-black text-slate-800 mb-1 uppercase tracking-tight ${isAr ? 'text-2xl' : 'text-xl'}`}>{label} ?</h3>
       <div className="flex flex-col gap-3 mt-8">
         <button 
           onClick={onConfirm}
-          className="w-full py-4 bg-rose-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-100 hover:bg-rose-700 transition-all"
+          className={`w-full py-4 bg-rose-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-rose-100 hover:bg-rose-700 transition-all ${isAr ? 'text-sm' : 'text-xs'}`}
         >
-          Confirmer
+          {isAr ? 'تأكيد' : 'Confirmer'}
         </button>
         <button 
           onClick={onCancel}
-          className="w-full py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition-all"
+          className={`w-full py-4 text-slate-400 font-black uppercase tracking-widest hover:text-slate-600 transition-all ${isAr ? 'text-sm' : 'text-xs'}`}
         >
-          Annuler
+          {isAr ? 'إلغاء' : 'Annuler'}
         </button>
       </div>
     </div>

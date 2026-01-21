@@ -1,13 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import { Apartment } from '../types';
+import { Apartment, BuildingInfo } from '../types';
 
 interface LoginProps {
   apartments: Apartment[];
+  buildingInfo: BuildingInfo;
   onLogin: (user: any) => void;
 }
 
-const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
+const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
   const [activeTab, setActiveTab] = useState<'syndic' | 'owner'>('syndic');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +21,8 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
   const [enteredOtp, setEnteredOtp] = useState('');
   
   const [error, setError] = useState('');
+
+  const isOwnerInterfaceEnabled = buildingInfo.ownerInterfaceEnabled;
 
   // Trier les appartements pour la liste déroulante
   const sortedApartments = useMemo(() => {
@@ -43,6 +46,11 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
   };
 
   const handleSendOtp = () => {
+    if (!isOwnerInterfaceEnabled) {
+      setError("L'accès propriétaire est actuellement désactivé par le syndic.");
+      return;
+    }
+
     const inputPhone = normalizePhone(phone);
 
     if (!selectedAptId || !inputPhone) {
@@ -107,19 +115,21 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
           <p className="text-indigo-100 text-xs mt-1 font-medium opacity-80 uppercase tracking-widest">Portail de Copropriété</p>
         </div>
 
-        <div className="flex border-b">
+        <div className={`flex border-b ${!isOwnerInterfaceEnabled ? 'justify-center' : ''}`}>
           <button 
             onClick={() => { setActiveTab('syndic'); setStep(1); setError(''); }}
             className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'syndic' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
           >
             Espace Syndic
           </button>
-          <button 
-            onClick={() => { setActiveTab('owner'); setStep(1); setError(''); }}
-            className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owner' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Espace Propriétaire
-          </button>
+          {isOwnerInterfaceEnabled && (
+            <button 
+              onClick={() => { setActiveTab('owner'); setStep(1); setError(''); }}
+              className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owner' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Espace Propriétaire
+            </button>
+          )}
         </div>
 
         <div className="p-8">
@@ -151,73 +161,70 @@ const Login: React.FC<LoginProps> = ({ apartments, onLogin }) => {
             </form>
           ) : (
             <div className="space-y-5">
-              {step === 1 ? (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sélectionner votre Appartement</label>
-                    <div className="relative">
-                      <i className="fas fa-door-closed absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
-                      <select 
-                        value={selectedAptId} 
-                        onChange={e => setSelectedAptId(e.target.value)} 
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium appearance-none"
+              {isOwnerInterfaceEnabled ? (
+                step === 1 ? (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sélectionner votre Appartement</label>
+                        <div className="relative">
+                          <i className="fas fa-door-closed absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
+                          <select 
+                            value={selectedAptId} 
+                            onChange={e => setSelectedAptId(e.target.value)} 
+                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium appearance-none"
+                          >
+                            <option value="">Choisir un appartement...</option>
+                            {sortedApartments.map(apt => (
+                              <option key={apt.id} value={apt.id}>
+                                Appartement {apt.number} - {apt.owner}
+                              </option>
+                            ))}
+                            {sortedApartments.length === 0 && (
+                              <option disabled>Aucun appartement configuré</option>
+                            )}
+                          </select>
+                          <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">N° Téléphone</label>
+                        <div className="relative">
+                          <i className="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium" placeholder="Ex: 06 12 34 56 78" />
+                        </div>
+                      </div>
+                      <button 
+                        onClick={handleSendOtp} 
+                        disabled={!selectedAptId || sortedApartments.length === 0}
+                        className="w-full bg-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-green-100 hover:bg-green-700 disabled:bg-slate-200 disabled:shadow-none transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest mt-4"
                       >
-                        <option value="">Choisir un appartement...</option>
-                        {sortedApartments.map(apt => (
-                          <option key={apt.id} value={apt.id}>
-                            Appartement {apt.number} - {apt.owner}
-                          </option>
-                        ))}
-                        {sortedApartments.length === 0 && (
-                          <option disabled>Aucun appartement configuré</option>
-                        )}
-                      </select>
-                      <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+                        Recevoir le code <i className="fab fa-whatsapp"></i>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                      <div className="text-center">
+                        <p className="text-xs text-slate-500 font-medium">Un code de vérification a été simulé pour votre mobile.</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block">Saisir le code à 6 chiffres</label>
+                        <input 
+                          type="text" 
+                          maxLength={6} 
+                          value={enteredOtp} 
+                          onChange={e => setEnteredOtp(e.target.value)}
+                          className="w-full text-center text-3xl font-black tracking-[1rem] py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" 
+                        />
+                      </div>
+                      <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest">
+                        Vérifier & Entrer
+                      </button>
+                      <button onClick={() => { setStep(1); setEnteredOtp(''); }} className="w-full text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest">
+                        Modifier les informations
+                      </button>
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">N° Téléphone</label>
-                    <div className="relative">
-                      <i className="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium" placeholder="Ex: 06 12 34 56 78" />
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleSendOtp} 
-                    disabled={!selectedAptId || sortedApartments.length === 0}
-                    className="w-full bg-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-green-100 hover:bg-green-700 disabled:bg-slate-200 disabled:shadow-none transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest mt-4"
-                  >
-                    Recevoir le code <i className="fab fa-whatsapp"></i>
-                  </button>
-                  {sortedApartments.length === 0 && (
-                    <p className="text-[10px] text-amber-600 font-bold text-center">
-                      <i className="fas fa-info-circle"></i> Le syndic doit d'abord configurer l'immeuble.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 font-medium">Un code de vérification a été simulé pour votre mobile.</p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block">Saisir le code à 6 chiffres</label>
-                    <input 
-                      type="text" 
-                      maxLength={6} 
-                      value={enteredOtp} 
-                      onChange={e => setEnteredOtp(e.target.value)}
-                      className="w-full text-center text-3xl font-black tracking-[1rem] py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" 
-                    />
-                  </div>
-                  <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest">
-                    Vérifier & Entrer
-                  </button>
-                  <button onClick={() => { setStep(1); setEnteredOtp(''); }} className="w-full text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest">
-                    Modifier les informations
-                  </button>
-                </div>
-              )}
+                  )
+              ) : null}
             </div>
           )}
         </div>

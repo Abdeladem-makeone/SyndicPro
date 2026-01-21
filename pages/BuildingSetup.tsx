@@ -102,6 +102,15 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
     }
   };
 
+  const handleToggleOwnerInterface = () => {
+    const updated = { ...formData, ownerInterfaceEnabled: !formData.ownerInterfaceEnabled };
+    setFormData(updated);
+    // On sauvegarde immédiatement pour l'expérience utilisateur si le bâtiment est déjà configuré
+    if (formData.isConfigured) {
+        onSave(updated);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-24">
       {loading && (
@@ -171,6 +180,25 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
                     <input required type="number" value={formData.defaultMonthlyFee} onChange={(e) => setFormData({...formData, defaultMonthlyFee: parseInt(e.target.value) || 0})} className="w-20 px-2 py-2 text-indigo-700 font-black text-center outline-none text-sm" />
                     <span className="px-3 text-[10px] font-black text-indigo-400">DH</span>
                   </div>
+                </div>
+
+                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${formData.ownerInterfaceEnabled ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-400'}`}>
+                      <i className={`fas ${formData.ownerInterfaceEnabled ? 'fa-eye' : 'fa-eye-slash'} text-sm`}></i>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Interface Propriétaires</label>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">Permettre l'accès aux résidents</p>
+                    </div>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={handleToggleOwnerInterface}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${formData.ownerInterfaceEnabled ? 'bg-teal-600' : 'bg-slate-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.ownerInterfaceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
                 </div>
 
                 <div className="bg-slate-900 p-6 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-6">

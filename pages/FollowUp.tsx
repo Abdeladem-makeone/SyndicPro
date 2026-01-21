@@ -221,21 +221,21 @@ const FollowUp: React.FC<FollowUpProps> = ({
       {/* HEADER SECTION */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t.title}</h2>
-          <p className="text-slate-500 text-[10px] font-black uppercase mt-1 tracking-widest opacity-60">{t.desc}</p>
+          <h2 className={`font-black text-slate-800 tracking-tight ${isAr ? 'text-4xl' : 'text-3xl'}`}>{t.title}</h2>
+          <p className={`font-black uppercase mt-1 tracking-widest opacity-60 text-slate-500 ${isAr ? 'text-xs' : 'text-[10px]'}`}>{t.desc}</p>
         </div>
         
         <div className="flex flex-wrap gap-3 w-full lg:w-auto">
           <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
              <button 
               onClick={() => setActiveTab('projects')} 
-              className={`px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'projects' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'}`}
+              className={`px-6 py-2.5 rounded-lg font-black uppercase tracking-widest transition-all ${activeTab === 'projects' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'} ${isAr ? 'text-sm' : 'text-[10px]'}`}
              >
                {t.tabProjects}
              </button>
              <button 
               onClick={() => setActiveTab('complaints')} 
-              className={`px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'complaints' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'}`}
+              className={`px-6 py-2.5 rounded-lg font-black uppercase tracking-widest transition-all ${activeTab === 'complaints' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600'} ${isAr ? 'text-sm' : 'text-[10px]'}`}
              >
                {t.tabComplaints}
              </button>
@@ -259,10 +259,10 @@ const FollowUp: React.FC<FollowUpProps> = ({
             className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-6 flex flex-col group relative overflow-hidden"
           >
             <div className="flex justify-between items-start mb-4">
-               <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+               <span className={`px-3 py-1 rounded-lg font-black uppercase tracking-widest ${
                  item.status === 'completed' || item.status === 'resolved' ? 'bg-emerald-50 text-emerald-600' : 
                  item.status === 'in-progress' || item.status === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'
-               }`}>
+               } ${isAr ? 'text-xs' : 'text-[9px]'}`}>
                  {item.status}
                </span>
                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -276,23 +276,23 @@ const FollowUp: React.FC<FollowUpProps> = ({
                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${activeTab === 'complaints' ? 'bg-rose-50 text-rose-500' : 'bg-indigo-50 text-indigo-500'}`}>
                     <i className={`fas ${activeTab === 'complaints' ? 'fa-triangle-exclamation' : 'fa-helmet-safety'}`}></i>
                  </div>
-                 <h3 className="text-sm font-black text-slate-800 line-clamp-1">
+                 <h3 className={`font-black text-slate-800 line-clamp-1 ${isAr ? 'text-lg' : 'text-sm'}`}>
                    {activeTab === 'complaints' ? (item as Complaint).category : (item as Project).title}
                  </h3>
                </div>
                
-               <p className="text-xs text-slate-500 font-medium leading-relaxed line-clamp-2">
+               <p className={`text-slate-500 font-medium leading-relaxed line-clamp-2 ${isAr ? 'text-base' : 'text-xs'}`}>
                  {activeTab === 'complaints' ? (item as Complaint).description : (item as Project).description}
                </p>
 
                <div className="flex flex-wrap gap-2 pt-2">
-                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${
+                  <span className={`px-2 py-0.5 rounded font-black uppercase tracking-tighter ${
                     item.priority === 'high' ? 'bg-rose-100 text-rose-700' : item.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                  }`}>
+                  } ${isAr ? 'text-[10px]' : 'text-[8px]'}`}>
                     {item.priority}
                   </span>
                   {item.attachments && item.attachments.length > 0 && (
-                    <span className="bg-slate-100 text-slate-400 px-2 py-0.5 rounded text-[8px] font-black uppercase"><i className="fas fa-paperclip mr-1"></i> {item.attachments.length}</span>
+                    <span className={`bg-slate-100 text-slate-400 px-2 py-0.5 rounded font-black uppercase ${isAr ? 'text-[10px]' : 'text-[8px]'}`}><i className="fas fa-paperclip mr-1"></i> {item.attachments.length}</span>
                   )}
                </div>
             </div>
@@ -300,21 +300,95 @@ const FollowUp: React.FC<FollowUpProps> = ({
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[8px] font-black uppercase text-slate-400">
                <div className="flex items-center gap-2">
                   <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center"><i className="fas fa-user text-[8px]"></i></div>
-                  <span>{item.authorName}</span>
+                  <span className={isAr ? 'text-[10px]' : ''}>{item.authorName}</span>
                </div>
-               <span>{activeTab === 'complaints' ? (item as Complaint).apartmentNumber : (item as Project).estimatedBudget ? `${(item as Project).estimatedBudget} DH` : ''}</span>
+               <span className={isAr ? 'text-[10px]' : ''}>{activeTab === 'complaints' ? (item as Complaint).apartmentNumber : (item as Project).estimatedBudget ? `${(item as Project).estimatedBudget} DH` : ''}</span>
             </div>
           </div>
         ))}
         {currentItems.length === 0 && (
           <div className="col-span-full py-20 text-center bg-white rounded-2xl border-2 border-dashed border-slate-100">
              <i className="fas fa-folder-open text-4xl text-slate-200 mb-4"></i>
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">{t.noItems}</p>
+             <p className={`font-black uppercase tracking-widest text-slate-300 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.noItems}</p>
           </div>
         )}
       </div>
 
-      {/* ADD/EDIT MODAL */}
+      {/* VIEW MODAL (AJUSTEMENT POLICE ARABE) */}
+      {viewingItem && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setViewingItem(null)}></div>
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl relative animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+             <div className="p-6 border-b flex justify-between items-center bg-slate-50/50">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm shadow-sm ${viewingItem.type === 'complaint' ? 'bg-rose-50 text-rose-500' : 'bg-indigo-50 text-indigo-500'}`}>
+                   <i className={`fas ${viewingItem.type === 'complaint' ? 'fa-triangle-exclamation' : 'fa-helmet-safety'}`}></i>
+                </div>
+                <button onClick={() => setViewingItem(null)} className="text-slate-300 hover:text-slate-500 transition-colors"><i className="fas fa-times"></i></button>
+             </div>
+             
+             <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
+                <div>
+                   <span className="bg-slate-100 text-slate-400 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest mb-2 inline-block">ID: {viewingItem.data.id}</span>
+                   <h3 className={`font-black text-slate-800 leading-tight ${isAr ? 'text-3xl' : 'text-2xl'}`}>
+                     {viewingItem.type === 'complaint' ? viewingItem.data.category : viewingItem.data.title}
+                   </h3>
+                </div>
+
+                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                   <p className={`text-slate-600 leading-relaxed font-medium whitespace-pre-wrap ${isAr ? 'text-lg' : 'text-sm'}`}>
+                     {viewingItem.data.description}
+                   </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                   <div className="space-y-1">
+                      <p className={`font-black text-slate-400 uppercase ${isAr ? 'text-sm' : 'text-[8px]'}`}>Statut</p>
+                      <p className={`font-black text-slate-700 uppercase ${isAr ? 'text-base' : 'text-[10px]'}`}>{viewingItem.data.status}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className={`font-black text-slate-400 uppercase ${isAr ? 'text-sm' : 'text-[8px]'}`}>Priorité</p>
+                      <p className={`font-black text-slate-700 uppercase ${isAr ? 'text-base' : 'text-[10px]'}`}>{viewingItem.data.priority}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className={`font-black text-slate-400 uppercase ${isAr ? 'text-sm' : 'text-[8px]'}`}>Auteur</p>
+                      <p className={`font-black text-slate-700 uppercase ${isAr ? 'text-base' : 'text-[10px]'}`}>{viewingItem.data.authorName}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className={`font-black text-slate-400 uppercase ${isAr ? 'text-sm' : 'text-[8px]'}`}>Référence</p>
+                      <p className={`font-black text-slate-700 uppercase ${isAr ? 'text-base' : 'text-[10px]'}`}>{viewingItem.type === 'complaint' ? viewingItem.data.apartmentNumber : `${viewingItem.data.estimatedBudget || 0} DH`}</p>
+                   </div>
+                </div>
+
+                {viewingItem.data.attachments && viewingItem.data.attachments.length > 0 && (
+                   <div className="space-y-3 pt-4 border-t">
+                      <p className={`font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.files}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                         {viewingItem.data.attachments.map((file: Attachment, i: number) => (
+                            <a 
+                              key={i} 
+                              href={file.data} 
+                              download={file.name}
+                              className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3 hover:bg-slate-100 transition-all group"
+                            >
+                               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm group-hover:text-indigo-600">
+                                  <i className="fas fa-file-arrow-down text-xs"></i>
+                               </div>
+                               <span className={`font-bold text-slate-500 truncate ${isAr ? 'text-xs' : 'text-[10px]'}`}>{file.name}</span>
+                            </a>
+                         ))}
+                      </div>
+                   </div>
+                )}
+             </div>
+             
+             <div className="p-6 bg-slate-50 border-t flex justify-end">
+                <button onClick={() => setViewingItem(null)} className={`px-8 py-3 bg-slate-800 text-white rounded-xl font-black uppercase tracking-widest ${isAr ? 'text-base' : 'text-[10px]'}`}>{t.close}</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AJOUT (LES LABELS ET SELECTS) */}
       {showAddModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={resetForm}></div>
@@ -325,8 +399,8 @@ const FollowUp: React.FC<FollowUpProps> = ({
                     <i className={`fas ${activeTab === 'projects' ? 'fa-helmet-safety' : 'fa-triangle-exclamation'}`}></i>
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-800 tracking-tight">{editingItem ? t.editItem : (activeTab === 'projects' ? t.newProject : t.newComplaint)}</h3>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase">{t.desc}</p>
+                    <h3 className={`font-black text-slate-800 tracking-tight ${isAr ? 'text-2xl' : 'text-lg'}`}>{editingItem ? t.editItem : (activeTab === 'projects' ? t.newProject : t.newComplaint)}</h3>
+                    <p className={`font-bold uppercase ${isAr ? 'text-xs' : 'text-[9px]'} text-slate-400`}>{t.desc}</p>
                   </div>
                </div>
                <button onClick={resetForm} className="text-slate-300 hover:text-slate-600"><i className="fas fa-times"></i></button>
@@ -338,13 +412,13 @@ const FollowUp: React.FC<FollowUpProps> = ({
                    <div className="flex gap-4">
                       <button 
                         onClick={() => setFormType('building')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${formType === 'building' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-100'}`}
+                        className={`flex-1 py-3 rounded-xl font-black uppercase tracking-widest border transition-all ${formType === 'building' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-100'} ${isAr ? 'text-base' : 'text-[10px]'}`}
                       >
                         {t.building}
                       </button>
                       <button 
                         onClick={() => setFormType('apartment')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${formType === 'apartment' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-100'}`}
+                        className={`flex-1 py-3 rounded-xl font-black uppercase tracking-widest border transition-all ${formType === 'apartment' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-100'} ${isAr ? 'text-base' : 'text-[10px]'}`}
                       >
                         {t.apartment}
                       </button>
@@ -352,11 +426,11 @@ const FollowUp: React.FC<FollowUpProps> = ({
                    
                    {formType === 'apartment' && (
                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Appartement concerné</label>
+                        <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>Appartement concerné</label>
                         <select 
                           value={selectedAptId} 
                           onChange={e => setSelectedAptId(e.target.value)}
-                          className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-indigo-600 outline-none transition-all"
+                          className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-indigo-600 outline-none transition-all ${isAr ? 'text-lg' : 'text-sm'}`}
                         >
                           <option value="">Sélectionner...</option>
                           {apartments.map(a => <option key={a.id} value={a.id}>Appt {a.number} - {a.owner}</option>)}
@@ -366,21 +440,21 @@ const FollowUp: React.FC<FollowUpProps> = ({
 
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie d'incident</label>
+                         <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>Catégorie d'incident</label>
                          <select 
                             value={complaintForm.category} 
                             onChange={e => setComplaintForm({...complaintForm, category: e.target.value as ExpenseCategory})}
-                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-rose-600 outline-none"
+                            className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-rose-600 outline-none ${isAr ? 'text-lg' : 'text-sm'}`}
                          >
                             {Object.values(ExpenseCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                          </select>
                       </div>
                       <div className="space-y-1">
-                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.status}</label>
+                         <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.status}</label>
                          <select 
                             value={complaintForm.status} 
                             onChange={e => setComplaintForm({...complaintForm, status: e.target.value as any})}
-                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-rose-600 outline-none"
+                            className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-rose-600 outline-none ${isAr ? 'text-lg' : 'text-sm'}`}
                          >
                             <option value="open">Ouvert</option>
                             <option value="pending">En attente</option>
@@ -394,21 +468,21 @@ const FollowUp: React.FC<FollowUpProps> = ({
               {activeTab === 'projects' && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.titleLabel}</label>
+                    <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.titleLabel}</label>
                     <input 
                       type="text" 
                       value={projectForm.title} 
                       onChange={e => setProjectForm({...projectForm, title: e.target.value})}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-indigo-600 outline-none" 
+                      className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-indigo-600 outline-none ${isAr ? 'text-lg' : 'text-sm'}`} 
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.status}</label>
+                       <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.status}</label>
                        <select 
                           value={projectForm.status} 
                           onChange={e => setProjectForm({...projectForm, status: e.target.value as any})}
-                          className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-indigo-600 outline-none"
+                          className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-indigo-600 outline-none ${isAr ? 'text-lg' : 'text-sm'}`}
                        >
                           <option value="planned">Prévu</option>
                           <option value="in-progress">En cours</option>
@@ -416,12 +490,12 @@ const FollowUp: React.FC<FollowUpProps> = ({
                        </select>
                     </div>
                     <div className="space-y-1">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Budget Estimé (DH)</label>
+                       <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>Budget Estimé (DH)</label>
                        <input 
                          type="number" 
                          value={projectForm.estimatedBudget} 
                          onChange={e => setProjectForm({...projectForm, estimatedBudget: parseInt(e.target.value) || 0})}
-                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-black text-indigo-600 focus:ring-2 focus:ring-indigo-600 outline-none" 
+                         className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl font-black text-indigo-600 focus:ring-2 focus:ring-indigo-600 outline-none ${isAr ? 'text-lg' : 'text-sm'}`} 
                        />
                     </div>
                   </div>
@@ -429,28 +503,28 @@ const FollowUp: React.FC<FollowUpProps> = ({
               )}
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.descLabel}</label>
+                <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.descLabel}</label>
                 <textarea 
                   rows={4}
                   value={activeTab === 'projects' ? projectForm.description : complaintForm.description} 
                   onChange={e => activeTab === 'projects' ? setProjectForm({...projectForm, description: e.target.value}) : setComplaintForm({...complaintForm, description: e.target.value})}
                   placeholder={t.placeholderDesc}
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-slate-300 outline-none transition-all"
+                  className={`w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-xl font-bold focus:ring-2 focus:ring-slate-300 outline-none transition-all ${isAr ? 'text-lg' : 'text-sm'}`}
                 />
               </div>
 
               <div className="space-y-3">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.priority}</label>
+                 <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.priority}</label>
                  <div className="grid grid-cols-3 gap-3">
                    {(['low', 'medium', 'high'] as const).map(p => (
                      <button 
                       key={p} 
                       onClick={() => activeTab === 'projects' ? setProjectForm({...projectForm, priority: p}) : setComplaintForm({...complaintForm, priority: p})}
-                      className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                      className={`py-3 rounded-xl font-black uppercase tracking-widest border transition-all ${
                         (activeTab === 'projects' ? projectForm.priority : complaintForm.priority) === p 
                           ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
                           : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
-                      }`}
+                      } ${isAr ? 'text-base' : 'text-[9px]'}`}
                      >
                        {p === 'low' ? t.priorityLow : p === 'medium' ? t.priorityMed : t.priorityHigh}
                      </button>
@@ -461,7 +535,7 @@ const FollowUp: React.FC<FollowUpProps> = ({
               {/* ATTACHMENTS SECTION */}
               <div className="space-y-4 pt-4 border-t">
                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t.files}</label>
+                    <label className={`font-black text-slate-400 uppercase tracking-widest ml-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.files}</label>
                     <span className="text-[8px] font-bold text-slate-400 italic">{t.maxSize}</span>
                  </div>
                  
@@ -479,90 +553,16 @@ const FollowUp: React.FC<FollowUpProps> = ({
                     <label className={`aspect-square border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-300 hover:border-indigo-400 hover:text-indigo-400 cursor-pointer transition-all ${isUploading ? 'animate-pulse pointer-events-none' : ''}`}>
                        <input type="file" multiple onChange={handleFileChange} className="hidden" />
                        <i className={`fas ${isUploading ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'} text-lg`}></i>
-                       <span className="text-[8px] font-black mt-2 uppercase tracking-tighter">Ajouter</span>
+                       <span className={`font-black mt-2 uppercase tracking-tighter ${isAr ? 'text-sm' : 'text-[8px]'}`}>Ajouter</span>
                     </label>
                  </div>
               </div>
             </div>
 
             <div className="p-6 bg-slate-50 border-t flex gap-3">
-              <button onClick={resetForm} className="flex-1 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">{t.cancel}</button>
-              <button onClick={handleSave} className="flex-2 px-10 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">{t.confirm}</button>
+              <button onClick={resetForm} className={`flex-1 py-3 font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors ${isAr ? 'text-base' : 'text-[10px]'}`}>{t.cancel}</button>
+              <button onClick={handleSave} className={`flex-2 px-10 py-3 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all ${isAr ? 'text-base' : 'text-[10px]'}`}>{t.confirm}</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW MODAL */}
-      {viewingItem && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setViewingItem(null)}></div>
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl relative animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-             <div className="p-6 border-b flex justify-between items-center bg-slate-50/50">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm shadow-sm ${viewingItem.type === 'complaint' ? 'bg-rose-50 text-rose-500' : 'bg-indigo-50 text-indigo-500'}`}>
-                   <i className={`fas ${viewingItem.type === 'complaint' ? 'fa-triangle-exclamation' : 'fa-helmet-safety'}`}></i>
-                </div>
-                <button onClick={() => setViewingItem(null)} className="text-slate-300 hover:text-slate-500 transition-colors"><i className="fas fa-times"></i></button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
-                <div>
-                   <span className="bg-slate-100 text-slate-400 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest mb-2 inline-block">ID: {viewingItem.data.id}</span>
-                   <h3 className="text-2xl font-black text-slate-800 leading-tight">
-                     {viewingItem.type === 'complaint' ? viewingItem.data.category : viewingItem.data.title}
-                   </h3>
-                </div>
-
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                   <p className="text-sm text-slate-600 leading-relaxed font-medium whitespace-pre-wrap">
-                     {viewingItem.data.description}
-                   </p>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                   <div className="space-y-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase">Statut</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase">{viewingItem.data.status}</p>
-                   </div>
-                   <div className="space-y-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase">Priorité</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase">{viewingItem.data.priority}</p>
-                   </div>
-                   <div className="space-y-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase">Auteur</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase">{viewingItem.data.authorName}</p>
-                   </div>
-                   <div className="space-y-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase">Référence</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase">{viewingItem.type === 'complaint' ? viewingItem.data.apartmentNumber : `${viewingItem.data.estimatedBudget || 0} DH`}</p>
-                   </div>
-                </div>
-
-                {viewingItem.data.attachments && viewingItem.data.attachments.length > 0 && (
-                   <div className="space-y-3 pt-4 border-t">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.files}</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                         {viewingItem.data.attachments.map((file: Attachment, i: number) => (
-                            <a 
-                              key={i} 
-                              href={file.data} 
-                              download={file.name}
-                              className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3 hover:bg-slate-100 transition-all group"
-                            >
-                               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm group-hover:text-indigo-600">
-                                  <i className="fas fa-file-arrow-down text-xs"></i>
-                               </div>
-                               <span className="text-[10px] font-bold text-slate-500 truncate">{file.name}</span>
-                            </a>
-                         ))}
-                      </div>
-                   </div>
-                )}
-             </div>
-             
-             <div className="p-6 bg-slate-50 border-t flex justify-end">
-                <button onClick={() => setViewingItem(null)} className="px-8 py-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">{t.close}</button>
-             </div>
           </div>
         </div>
       )}
