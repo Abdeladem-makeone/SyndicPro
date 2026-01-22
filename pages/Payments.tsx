@@ -9,17 +9,16 @@ interface PaymentsProps {
   payments: Payment[];
   buildingInfo: BuildingInfo;
   onTogglePayment: (aptId: string, month: number, year: number) => void;
-  onBulkPay?: (aptIds: string[], month: number, year: number) => void;
+  onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo, onTogglePayment }) => {
+const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo, onTogglePayment, onNotify }) => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [viewMode, setViewMode] = useState<'apartment' | 'monthly'>('apartment');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Génération dynamique des années (Année en cours + 5 ans)
   const years = useMemo(() => {
     return Array.from({ length: 6 }, (_, i) => currentYear + i);
   }, [currentYear]);
@@ -52,16 +51,18 @@ const Payments: React.FC<PaymentsProps> = ({ apartments, payments, buildingInfo,
   }, [apartments, payments, selectedMonth, selectedYear, viewMode]);
 
   const handleMarkAllPaid = () => {
-    if (confirm(`Voulez-vous marquer tous les appartements filtrés (${filteredApartments.length}) comme payés pour ${MONTHS[selectedMonth]} ${selectedYear} ?`)) {
+    if (confirm(`Marquer tous les appartements (${filteredApartments.length}) comme payés pour ${MONTHS[selectedMonth]} ?`)) {
       filteredApartments.forEach(apt => {
         if (!isPaid(apt.id, selectedMonth)) {
           onTogglePayment(apt.id, selectedMonth, selectedYear);
         }
       });
+      onNotify?.(`${filteredApartments.length} paiements validés pour ${MONTHS[selectedMonth]}`);
     }
   };
 
   const handleExportPDF = () => {
+    onNotify?.("Génération du PDF...", "info");
     if (viewMode === 'apartment') {
       const headers = ['Appartement', 'Propriétaire', ...MONTHS.map(m => m.substring(0, 3))];
       const rows = filteredApartments.map(apt => [

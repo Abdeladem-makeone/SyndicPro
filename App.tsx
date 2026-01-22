@@ -1,4 +1,3 @@
-
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -26,6 +25,34 @@ const ConfigGuard: React.FC<{ isConfigured: boolean; children: React.ReactNode }
   return <>{children}</>;
 };
 
+// Composant Toast élégant
+const Toast: React.FC<{ message: string, type: 'success' | 'error' | 'info', onClose: () => void }> = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const styles = {
+    success: 'bg-emerald-600 shadow-emerald-200',
+    error: 'bg-rose-600 shadow-rose-200',
+    info: 'bg-indigo-600 shadow-indigo-200'
+  };
+
+  const icons = {
+    success: 'fa-circle-check',
+    error: 'fa-triangle-exclamation',
+    info: 'fa-circle-info'
+  };
+
+  return (
+    <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl text-white font-bold text-sm shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300 ${styles[type]}`}>
+      <i className={`fas ${icons[type]} text-lg`}></i>
+      <span className="tracking-wide">{message}</span>
+      <button onClick={onClose} className="ml-4 opacity-50 hover:opacity-100 transition-opacity"><i className="fas fa-times"></i></button>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('syndic_session');
@@ -45,7 +72,6 @@ const App: React.FC = () => {
   const [assetPayments, setAssetPayments] = useState<AssetPayment[]>([]);
   const [profileRequests, setProfileRequests] = useState<ProfileRequest[]>([]);
   
-  // Added missing properties to BuildingInfo initial state
   const [buildingInfo, setBuildingInfo] = useState<BuildingInfo>({
     name: '', address: '', totalUnits: 0, unitsPerFloor: 0, numFloors: 0, 
     defaultMonthlyFee: 50, isConfigured: false, autoRemindersEnabled: false, 
@@ -53,6 +79,13 @@ const App: React.FC = () => {
     ownerShowBalance: false, ownerShowExpenseRegister: false, ownerCanCreateOps: false
   });
   const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>([]);
+
+  // État pour les notifications
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
+
+  const notify = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setNotification({ message, type });
+  };
 
   const loadData = useCallback(() => {
     const { building, apartments: apts } = storage.loadBuildingData();
@@ -63,7 +96,6 @@ const App: React.FC = () => {
     const reqs = storage.loadProfileRequests();
 
     if (building) {
-        // Migration: ensure property exists if not present in storage. Default to false as requested.
         if (building.ownerInterfaceEnabled === undefined) building.ownerInterfaceEnabled = false;
         setBuildingInfo(building);
     }
@@ -89,16 +121,19 @@ const App: React.FC = () => {
       setLanguage(user.language);
       localStorage.setItem('syndic_lang', user.language);
     }
+    notify(`Bienvenue ${user.username} !`);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('syndic_session');
     setCurrentUser(null);
+    notify("Déconnexion réussie", "info");
   };
 
   const toggleLanguage = (lang: 'fr' | 'ar') => {
     setLanguage(lang);
     localStorage.setItem('syndic_lang', lang);
+    notify(lang === 'fr' ? "Langue : Français" : "اللغة: العربية", "info");
   };
 
   const handleTogglePayment = (aptId: string, month: number, year: number) => {
@@ -110,6 +145,7 @@ const App: React.FC = () => {
 
     if (existingIndex > -1) {
       newPayments.splice(existingIndex, 1);
+      notify(`Paiement annulé pour l'appartement ${apt.number}`, "info");
     } else {
       newPayments.push({
         id: Date.now().toString(),
@@ -119,41 +155,54 @@ const App: React.FC = () => {
         amount: apt.monthlyFee,
         paidDate: new Date().toISOString()
       });
+      notify(`Paiement enregistré pour l'appartement ${apt.number}`);
     }
 
     setPayments(newPayments);
     storage.saveYearlyFinance(year, newPayments, expenses, assetPayments);
   };
 
-  const handleProfileRequest = (req: ProfileRequest) => {
-    const next = [...profileRequests, req];
-    setProfileRequests(next);
-    storage.saveProfileRequests(next);
-  };
+  // --- Profile Requests Handlers ---
 
-  const handleAdminProfileReview = (id: string, approved: boolean) => {
-    const req = profileRequests.find(r => r.id === id);
-    if (!req) return;
+  /**
+   * Approves or rejects a profile update request from an owner.
+   */
+  const handleAdminProfileReview = (requestId: string, approved: boolean) => {
+    const updatedRequests = profileRequests.map(r => 
+      r.id === requestId ? { ...r, status: (approved ? 'approved' : 'rejected') as 'approved' | 'rejected' } : r
+    );
 
     if (approved) {
-      const nextApts = apartments.map(a => a.id === req.apartmentId ? { ...a, phone: req.newPhone } : a);
-      setApartments(nextApts);
-      storage.saveBuildingData(buildingInfo, nextApts);
-      const nextReqs = profileRequests.filter(r => r.id !== id);
-      setProfileRequests(nextReqs);
-      storage.saveProfileRequests(nextReqs);
-    } else {
-      const nextReqs = profileRequests.map(r => r.id === id ? { ...r, status: 'rejected' as const } : r);
-      setProfileRequests(nextReqs);
-      storage.saveProfileRequests(nextReqs);
+      const req = profileRequests.find(r => r.id === requestId);
+      if (req) {
+        const updatedApts = apartments.map(a => 
+          a.id === req.apartmentId ? { ...a, phone: req.newPhone } : a
+        );
+        setApartments(updatedApts);
+        storage.saveBuildingData(buildingInfo, updatedApts);
+      }
     }
-    alert(approved ? "Approuvé." : "Rejeté.");
+
+    setProfileRequests(updatedRequests);
+    storage.saveProfileRequests(updatedRequests);
   };
 
+  /**
+   * Submits a new profile update request from an owner.
+   */
+  const handleProfileRequest = (req: ProfileRequest) => {
+    const updated = [req, ...profileRequests];
+    setProfileRequests(updated);
+    storage.saveProfileRequests(updated);
+  };
+
+  /**
+   * Dismisses a rejected or processed request from the owner's view.
+   */
   const handleDismissProfileRequest = (id: string) => {
-    const nextReqs = profileRequests.filter(r => r.id !== id);
-    setProfileRequests(nextReqs);
-    storage.saveProfileRequests(nextReqs);
+    const updated = profileRequests.filter(r => r.id !== id);
+    setProfileRequests(updated);
+    storage.saveProfileRequests(updated);
   };
 
   if (!currentUser) return <Login apartments={apartments} buildingInfo={buildingInfo} onLogin={handleLogin} />;
@@ -161,7 +210,6 @@ const App: React.FC = () => {
   const isAdmin = currentUser.role === 'admin';
   const myApartment = !isAdmin ? apartments.find(a => a.id === currentUser.apartmentId) : null;
 
-  // Si l'utilisateur est un propriétaire mais que l'interface est désactivée, on le déconnecte ou on le bloque
   if (!isAdmin && !buildingInfo.ownerInterfaceEnabled) {
       return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -170,7 +218,7 @@ const App: React.FC = () => {
                     <i className="fas fa-lock"></i>
                 </div>
                 <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Accès Désactivé</h2>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Le gestionnaire a temporairement désactivé l'accès propriétaire. Veuillez réessayer plus tard.</p>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Le gestionnaire a temporairement désactivé l'accès propriétaire.</p>
                 <button onClick={handleLogout} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Retour</button>
             </div>
         </div>
@@ -200,14 +248,17 @@ const App: React.FC = () => {
                       if (newApts) {
                         setApartments(newApts);
                         storage.initialize(info, newApts);
+                        notify("Initialisation terminée !");
                       } else {
                         storage.saveBuildingData(info, apartments);
+                        notify("Paramètres sauvegardés");
                       }
                       loadData();
                     }} 
                     onImportFullDB={() => {}} 
                     fullData={storage.getFullExport()} 
                     currentApartmentsCount={apartments.length}
+                    onNotify={notify}
                   />
                 } />
                 <Route path="/apartments" element={
@@ -219,20 +270,24 @@ const App: React.FC = () => {
                       const newApts = apartments.map(a => a.id === apt.id ? apt : a);
                       setApartments(newApts);
                       storage.saveBuildingData(buildingInfo, newApts);
+                      notify(`Appartement ${apt.number} mis à jour`);
                     }} 
                     onAdd={(apt) => {
                       const newApts = [...apartments, apt];
                       setApartments(newApts);
                       storage.saveBuildingData(buildingInfo, newApts);
+                      notify(`Appartement ${apt.number} ajouté`);
                     }} 
                     onDelete={(id) => {
+                      const num = apartments.find(a => a.id === id)?.number;
                       const newApts = apartments.filter(a => a.id !== id);
                       setApartments(newApts);
                       storage.saveBuildingData(buildingInfo, newApts);
+                      notify(`Appartement ${num} supprimé`, "info");
                     }} 
                   />
                 } />
-                <Route path="/payments" element={<Payments apartments={apartments} payments={payments} buildingInfo={buildingInfo} onTogglePayment={handleTogglePayment} />} />
+                <Route path="/payments" element={<Payments apartments={apartments} payments={payments} buildingInfo={buildingInfo} onTogglePayment={handleTogglePayment} onNotify={notify} />} />
                 <Route path="/expenses" element={
                   <Expenses 
                     expenses={expenses} 
@@ -240,17 +295,21 @@ const App: React.FC = () => {
                       const newExp = [...expenses, exp];
                       setExpenses(newExp);
                       storage.saveYearlyFinance(new Date(exp.date).getFullYear(), payments, newExp, assetPayments);
+                      notify("Dépense enregistrée");
                     }} 
                     onUpdate={(exp) => {
                       const newExp = expenses.map(e => e.id === exp.id ? exp : e);
                       setExpenses(newExp);
                       storage.saveYearlyFinance(new Date(exp.date).getFullYear(), payments, newExp, assetPayments);
+                      notify("Dépense modifiée");
                     }} 
                     onDelete={(id) => {
                       const newExp = expenses.filter(e => e.id !== id);
                       setExpenses(newExp);
-                      const year = expenses.find(e => e.id === id)?.date ? new Date(expenses.find(e => e.id === id)!.date).getFullYear() : new Date().getFullYear();
+                      const item = expenses.find(e => e.id === id);
+                      const year = item?.date ? new Date(item.date).getFullYear() : new Date().getFullYear();
                       storage.saveYearlyFinance(year, payments, newExp, assetPayments);
+                      notify("Dépense supprimée", "info");
                     }} 
                   />
                 } />
@@ -258,7 +317,11 @@ const App: React.FC = () => {
                   const newApts = apartments.map(a => a.id === apt.id ? apt : a);
                   setApartments(newApts);
                   storage.saveBuildingData(buildingInfo, newApts);
-                }} profileRequests={profileRequests.filter(r => r.status === 'pending')} onHandleProfileRequest={handleAdminProfileReview} />} />
+                  notify(`Contact ${apt.owner} mis à jour`);
+                }} profileRequests={profileRequests.filter(r => r.status === 'pending')} onHandleProfileRequest={(id, app) => {
+                    handleAdminProfileReview(id, app);
+                    notify(app ? "Changement approuvé" : "Changement rejeté", app ? "success" : "info");
+                }} />} />
                 <Route path="/reminders" element={
                   <ReminderCenter 
                     apartments={apartments} 
@@ -267,16 +330,19 @@ const App: React.FC = () => {
                     onUpdateBuilding={(info) => {
                       setBuildingInfo(info);
                       storage.saveBuildingData(info, apartments);
+                      notify("Configuration WhatsApp mise à jour");
                     }} 
                     reminderHistory={reminderHistory} 
                     onAddReminderLog={(log) => {
                       const newLogs = [...reminderHistory, log];
                       setReminderHistory(newLogs);
                       storage.saveReminders(newLogs);
+                      notify(`Rappel envoyé à ${log.ownerName}`);
                     }} 
                     onClearHistory={() => {
                       setReminderHistory([]);
                       storage.saveReminders([]);
+                      notify("Historique vidé", "info");
                     }}
                   />
                 } />
@@ -288,27 +354,32 @@ const App: React.FC = () => {
                       const next = [...assets, a];
                       setAssets(next);
                       storage.saveAssets(next);
+                      notify("Nouveau bien ajouté");
                     }} 
                     onUpdateAsset={(a) => {
                       const next = assets.map(item => item.id === a.id ? a : item);
                       setAssets(next);
                       storage.saveAssets(next);
+                      notify("Bien mis à jour");
                     }} 
                     onDeleteAsset={(id) => {
                       const next = assets.filter(item => item.id !== id);
                       setAssets(next);
                       storage.saveAssets(next);
+                      notify("Bien supprimé", "info");
                     }} 
                     onAddPayment={(p) => {
                       const next = [...assetPayments, p];
                       setAssetPayments(next);
                       storage.saveYearlyFinance(p.year, payments, expenses, next);
+                      notify("Revenu encaissé !");
                     }} 
                     onDeletePayment={(id) => {
                       const p = assetPayments.find(item => item.id === id);
                       const next = assetPayments.filter(item => item.id !== id);
                       setAssetPayments(next);
                       if (p) storage.saveYearlyFinance(p.year, payments, expenses, next);
+                      notify("Paiement supprimé", "info");
                     }} 
                   />
                 } />
@@ -322,6 +393,7 @@ const App: React.FC = () => {
                     onRefresh={loadData} 
                     buildingInfo={buildingInfo}
                     language={language}
+                    onNotify={notify}
                   />
                 } />
               </>
@@ -332,7 +404,11 @@ const App: React.FC = () => {
                    const next = apartments.map(a => a.id === apt.id ? apt : a);
                    setApartments(next);
                    storage.saveBuildingData(buildingInfo, next);
-                }} onRequestPhoneChange={handleProfileRequest} pendingRequests={profileRequests} onDismissRequest={handleDismissProfileRequest} language={language} />} />
+                   notify("Profil mis à jour");
+                }} onRequestPhoneChange={(req) => {
+                    handleProfileRequest(req);
+                    notify("Demande envoyée au syndic", "info");
+                }} pendingRequests={profileRequests} onDismissRequest={handleDismissProfileRequest} language={language} />} />
                 <Route path="/followup" element={
                   <FollowUp 
                     apartments={apartments} 
@@ -342,6 +418,7 @@ const App: React.FC = () => {
                     onRefresh={loadData} 
                     buildingInfo={buildingInfo}
                     language={language}
+                    onNotify={notify}
                   />
                 } />
               </>
@@ -350,6 +427,13 @@ const App: React.FC = () => {
           </Routes>
         </ConfigGuard>
       </Layout>
+      {notification && (
+        <Toast 
+          message={notification.message} 
+          type={notification.type} 
+          onClose={() => setNotification(null)} 
+        />
+      )}
     </HashRouter>
   );
 };

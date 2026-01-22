@@ -11,6 +11,7 @@ interface FollowUpProps {
   onRefresh: () => void;
   buildingInfo: BuildingInfo;
   language?: 'fr' | 'ar';
+  onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const FollowUp: React.FC<FollowUpProps> = ({
@@ -20,7 +21,8 @@ const FollowUp: React.FC<FollowUpProps> = ({
   currentUser,
   onRefresh,
   buildingInfo,
-  language = 'fr'
+  language = 'fr',
+  onNotify
 }) => {
   const [activeTab, setActiveTab] = useState<'projects' | 'complaints'>('projects');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -29,8 +31,6 @@ const FollowUp: React.FC<FollowUpProps> = ({
 
   const isAdmin = currentUser.role === 'admin';
   const isAr = language === 'ar';
-
-  // Autorisation de création pour les propriétaires
   const canOwnerCreate = buildingInfo.ownerCanCreateOps;
 
   const translations = {
@@ -60,7 +60,9 @@ const FollowUp: React.FC<FollowUpProps> = ({
       apartment: 'Appartement spécifique',
       files: 'Fichiers joints',
       maxSize: 'Max 10 Mo au total',
-      noItems: 'Aucun enregistrement trouvé'
+      noItems: 'Aucun enregistrement trouvé',
+      msgSaved: 'Opération enregistrée avec succès',
+      msgDeleted: 'Élément supprimé'
     },
     ar: {
       title: 'العمليات والمتابعة',
@@ -88,7 +90,9 @@ const FollowUp: React.FC<FollowUpProps> = ({
       apartment: 'شقة محددة',
       files: 'الملفات المرفقة',
       maxSize: 'الأقصى 10 ميجا',
-      noItems: 'لا توجد سجلات'
+      noItems: 'لا توجد سجلات',
+      msgSaved: 'تم الحفظ بنجاح',
+      msgDeleted: 'تم الحذف'
     }
   };
 
@@ -121,7 +125,10 @@ const FollowUp: React.FC<FollowUpProps> = ({
     const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
     const totalSize = files.reduce((acc, f) => acc + f.size, 0);
-    if (totalSize > 10 * 1024 * 1024) return alert("Max 10 Mo");
+    if (totalSize > 10 * 1024 * 1024) {
+        onNotify?.("Taille totale > 10 Mo", "error");
+        return;
+    }
 
     setIsUploading(true);
     const promises = files.map(file => {
@@ -131,14 +138,18 @@ const FollowUp: React.FC<FollowUpProps> = ({
         reader.readAsDataURL(file);
       });
     });
-    Promise.all(promises).then(newAttachments => { setAttachments(prev => [...prev, ...newAttachments]); setIsUploading(false); });
+    Promise.all(promises).then(newAttachments => { 
+        setAttachments(prev => [...prev, ...newAttachments]); 
+        setIsUploading(false);
+        onNotify?.(`${newAttachments.length} fichier(s) ajouté(s)`);
+    });
   };
 
   const handleSave = () => {
     const { projects: curProjects, complaints: curComplaints } = storage.loadOperations();
     
     if (activeTab === 'projects') {
-      if (!projectForm.title || !projectForm.description) return alert("Champs obligatoires");
+      if (!projectForm.title || !projectForm.description) return onNotify?.("Champs manquants", "error");
       const itemToSave: Project = {
         ...(editingItem?.data || {}),
         ...projectForm as Project,
@@ -150,7 +161,7 @@ const FollowUp: React.FC<FollowUpProps> = ({
       const updated = editingItem ? curProjects.map((p: Project) => p.id === itemToSave.id ? itemToSave : p) : [itemToSave, ...curProjects];
       storage.saveOperations(updated, curComplaints);
     } else {
-      if (!complaintForm.description) return alert("Description obligatoire");
+      if (!complaintForm.description) return onNotify?.("Description vide", "error");
       const apt = apartments.find(a => a.id === (editingItem?.data?.apartmentId || selectedAptId));
       const itemToSave: Complaint = {
         ...(editingItem?.data || {}),
@@ -166,6 +177,7 @@ const FollowUp: React.FC<FollowUpProps> = ({
       const updated = editingItem ? curComplaints.map((c: Complaint) => c.id === itemToSave.id ? itemToSave : c) : [itemToSave, ...curComplaints];
       storage.saveOperations(curProjects, updated);
     }
+    onNotify?.(t.msgSaved);
     resetForm();
     onRefresh();
   };
@@ -175,6 +187,7 @@ const FollowUp: React.FC<FollowUpProps> = ({
     const { projects: curP, complaints: curC } = storage.loadOperations();
     if (type === 'projects') storage.saveOperations(curP.filter((p: Project) => p.id !== id), curC);
     else storage.saveOperations(curP, curC.filter((c: Complaint) => c.id !== id));
+    onNotify?.(t.msgDeleted, "info");
     onRefresh();
   };
 
@@ -245,7 +258,7 @@ const FollowUp: React.FC<FollowUpProps> = ({
     );
   }
 
-  // --- RENDU PROPRIÉTAIRE (THÈME DOUX : TEAL vs ROSE) ---
+  // --- RENDU PROPRIÉTAIRE ---
   const isProj = activeTab === 'projects';
   const themeClass = isProj ? 'teal' : 'rose';
   
@@ -261,9 +274,8 @@ const FollowUp: React.FC<FollowUpProps> = ({
              <button onClick={() => setActiveTab('projects')} className={`px-8 py-3 rounded-xl font-black uppercase tracking-widest transition-all ${isProj ? 'bg-teal-700 text-white shadow-lg' : 'text-slate-400 hover:text-teal-600'}`}>{t.tabProjects}</button>
              <button onClick={() => setActiveTab('complaints')} className={`px-8 py-3 rounded-xl font-black uppercase tracking-widest transition-all ${!isProj ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:text-rose-600'}`}>{t.tabComplaints}</button>
           </div>
-          {/* Bouton conditionnel selon réglage canOwnerCreate */}
           {canOwnerCreate && (
-            <button onClick={() => setShowAddModal(true)} className={`px-8 py-3 bg-${themeClass}-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-${themeClass}-900 transition-all flex items-center gap-3 animate-in fade-in zoom-in duration-300`}>
+            <button onClick={() => setShowAddModal(true)} className={`px-8 py-3 bg-${themeClass}-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-${themeClass}-900 transition-all flex items-center gap-3`}>
               <i className="fas fa-plus-circle text-sm"></i> {isProj ? t.newProject : t.newComplaint}
             </button>
           )}

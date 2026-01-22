@@ -10,11 +10,13 @@ interface BuildingSetupProps {
   onImportFullDB: (data: any) => void;
   fullData: any;
   currentApartmentsCount: number;
+  onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const BuildingSetup: React.FC<BuildingSetupProps> = ({ 
   buildingInfo, 
   onSave, 
+  onNotify
 }) => {
   const [formData, setFormData] = useState<BuildingInfo>(buildingInfo);
   const [activeTab, setActiveTab] = useState<'building' | 'syndic' | 'owners'>('building');
@@ -54,7 +56,7 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (activeTab === 'building') {
-      if (deducedUnits <= 0) return alert("Veuillez définir une structure valide (Étages x Unités).");
+      if (deducedUnits <= 0) return onNotify?.("Structure invalide", "error");
       
       setLoading(true);
       setTimeout(() => {
@@ -63,12 +65,11 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
         onSave(updatedInfo, apartmentsToSave);
         setLoading(false);
         setVirtualFiles(storage.getVirtualFiles());
-        alert(`Initialisation réussie ! ${deducedUnits} appartements ont été créés.`);
+        onNotify?.(`Base initialisée avec ${deducedUnits} unités`);
         navigate('/');
       }, 1200);
     } else {
       onSave(formData);
-      alert("Paramètres sauvegardés avec succès.");
     }
   };
 
@@ -81,6 +82,7 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
     a.download = `backup_syndicpro_${formData.name.replace(/\s+/g, '_') || 'global'}_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    onNotify?.("Sauvegarde JSON exportée", "success");
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,10 +93,10 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
     reader.onload = (event) => {
       const content = event.target?.result as string;
       if (storage.importFullData(content)) {
-        alert("Importation terminée !");
-        window.location.reload();
+        onNotify?.("Importation réussie", "success");
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert("Erreur de format : Fichier invalide.");
+        onNotify?.("Échec de l'import : format invalide", "error");
       }
     };
     reader.readAsText(file);
@@ -103,8 +105,8 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
   const handleFormat = () => {
     if (confirm("⚠️ ATTENTION : Vous allez supprimer toutes les données locales. Continuer ?")) {
       storage.formatStorage();
-      alert("Stockage vidé.");
-      window.location.reload();
+      onNotify?.("Toutes les données ont été effacées", "info");
+      setTimeout(() => window.location.reload(), 1000);
     }
   };
 
@@ -357,7 +359,7 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
           </div>
         </div>
 
-        {/* Data Management Section (Inchangé) */}
+        {/* Data Management Section */}
         <div className="lg:col-span-5 space-y-6">
            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[500px]">
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
