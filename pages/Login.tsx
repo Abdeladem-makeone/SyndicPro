@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Apartment, BuildingInfo } from '../types';
 
@@ -22,7 +21,7 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
   
   const [error, setError] = useState('');
 
-  const isOwnerInterfaceEnabled = buildingInfo.ownerInterfaceEnabled;
+  const isOwnerInterfaceEnabled = buildingInfo?.ownerInterfaceEnabled === true;
 
   // Trier les appartements pour la liste déroulante
   const sortedApartments = useMemo(() => {
@@ -37,7 +36,7 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
 
   const handleSyndicLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const storedPassword = buildingInfo.adminPassword || 'admin';
+    const storedPassword = buildingInfo?.adminPassword || 'admin';
     
     if (username === 'admin' && password === storedPassword) {
       onLogin({ id: 'admin', username: 'Administrateur', role: 'admin' });
@@ -48,11 +47,6 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
   };
 
   const handleSendOtp = () => {
-    if (!isOwnerInterfaceEnabled) {
-      setError("L'accès propriétaire est actuellement désactivé par le syndic.");
-      return;
-    }
-
     const inputPhone = normalizePhone(phone);
 
     if (!selectedAptId || !inputPhone) {
@@ -60,13 +54,10 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
       return;
     }
 
-    // Recherche de l'appartement sélectionné
     const apt = apartments.find(a => a.id === selectedAptId);
 
     if (apt) {
       const storedPhone = normalizePhone(apt.phone || '');
-      
-      // Vérification du téléphone (doit être renseigné et correspondre aux derniers chiffres)
       const phoneMatch = storedPhone !== '' && (storedPhone === inputPhone || storedPhone.endsWith(inputPhone) || inputPhone.endsWith(storedPhone));
       
       if (phoneMatch) {
@@ -74,16 +65,11 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
         setGeneratedOtp(otp);
         setStep(2);
         setError('');
-        
-        // Simulation d'envoi
-        console.log(`CODE OTP pour ${apt.owner}: ${otp}`);
-        alert(`Simulation WhatsApp pour ${apt.owner} (Appartement ${apt.number}) :\n\n"Votre code d'accès SyndicPro est : ${otp}"`);
+        alert(`Simulation WhatsApp pour ${apt.owner} :\n\n"Votre code d'accès SyndicPro est : ${otp}"`);
       } else {
-        setError("Le numéro de téléphone ne correspond pas à celui enregistré pour cet appartement.");
+        setError("Le numéro de téléphone ne correspond pas à celui enregistré.");
         setTimeout(() => setError(''), 4000);
       }
-    } else {
-      setError("Erreur lors de la sélection de l'appartement.");
     }
   };
 
@@ -117,21 +103,19 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
           <p className="text-indigo-100 text-xs mt-1 font-medium opacity-80 uppercase tracking-widest">Portail de Copropriété</p>
         </div>
 
-        <div className={`flex border-b ${!isOwnerInterfaceEnabled ? 'justify-center' : ''}`}>
+        <div className={`flex border-b ${!isOwnerInterfaceEnabled ? 'hidden' : ''}`}>
           <button 
             onClick={() => { setActiveTab('syndic'); setStep(1); setError(''); }}
-            className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'syndic' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'syndic' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
           >
             Espace Syndic
           </button>
-          {isOwnerInterfaceEnabled && (
-            <button 
-              onClick={() => { setActiveTab('owner'); setStep(1); setError(''); }}
-              className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owner' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              Espace Propriétaire
-            </button>
-          )}
+          <button 
+            onClick={() => { setActiveTab('owner'); setStep(1); setError(''); }}
+            className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'owner' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Espace Propriétaire
+          </button>
         </div>
 
         <div className="p-8">
@@ -157,17 +141,16 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
                   <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium" placeholder="••••••••" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest mt-4">
-                Connexion Syndic <i className="fas fa-chevron-right text-[10px]"></i>
+              <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest mt-4">
+                Connexion Syndic <i className="fas fa-chevron-right"></i>
               </button>
             </form>
           ) : (
             <div className="space-y-5">
-              {isOwnerInterfaceEnabled ? (
-                step === 1 ? (
+                {step === 1 ? (
                     <>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sélectionner votre Appartement</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Appartement</label>
                         <div className="relative">
                           <i className="fas fa-door-closed absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
                           <select 
@@ -178,12 +161,9 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
                             <option value="">Choisir un appartement...</option>
                             {sortedApartments.map(apt => (
                               <option key={apt.id} value={apt.id}>
-                                Appartement {apt.number} - {apt.owner}
+                                {apt.number} - {apt.owner}
                               </option>
                             ))}
-                            {sortedApartments.length === 0 && (
-                              <option disabled>Aucun appartement configuré</option>
-                            )}
                           </select>
                           <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
                         </div>
@@ -197,41 +177,34 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
                       </div>
                       <button 
                         onClick={handleSendOtp} 
-                        disabled={!selectedAptId || sortedApartments.length === 0}
-                        className="w-full bg-green-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-green-100 hover:bg-green-700 disabled:bg-slate-200 disabled:shadow-none transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest mt-4"
+                        disabled={!selectedAptId}
+                        className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 disabled:bg-slate-200 transition-all flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest mt-4"
                       >
                         Recevoir le code <i className="fab fa-whatsapp"></i>
                       </button>
                     </>
                   ) : (
                     <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
-                      <div className="text-center">
-                        <p className="text-xs text-slate-500 font-medium">Un code de vérification a été simulé pour votre mobile.</p>
-                      </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block">Saisir le code à 6 chiffres</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block">Saisir le code reçu</label>
                         <input 
                           type="text" 
                           maxLength={6} 
                           value={enteredOtp} 
                           onChange={e => setEnteredOtp(e.target.value)}
-                          className="w-full text-center text-3xl font-black tracking-[1rem] py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" 
+                          className="w-full text-center text-2xl font-black py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" 
                         />
                       </div>
-                      <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest">
-                        Vérifier & Entrer
-                      </button>
-                      <button onClick={() => { setStep(1); setEnteredOtp(''); }} className="w-full text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest">
-                        Modifier les informations
+                      <button onClick={handleVerifyOtp} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest">
+                        Confirmer
                       </button>
                     </div>
-                  )
-              ) : null}
+                  )}
             </div>
           )}
         </div>
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
-          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">SyndicPro Manager © 2024 - Sécurisé par chiffrement local</p>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">SyndicPro Manager © 2024 - Sécurisé LOCAL-ONLY</p>
         </div>
       </div>
     </div>

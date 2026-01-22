@@ -1,32 +1,22 @@
-
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import FollowUp from './pages/FollowUp';
 import Apartments from './pages/Apartments';
-import Expenses from './pages/Expenses';
 import Payments from './pages/Payments';
+import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Owners from './pages/Owners';
-import ReminderCenter from './pages/ReminderCenter';
-import AssetsManager from './pages/AssetsManager';
+import FollowUp from './pages/FollowUp';
 import BuildingSetup from './pages/BuildingSetup';
 import Login from './pages/Login';
+import ReminderCenter from './pages/ReminderCenter';
+import AssetsManager from './pages/AssetsManager';
 import OwnerDashboard from './pages/OwnerDashboard';
 import OwnerProfile from './pages/OwnerProfile';
-import { Apartment, Expense, Payment, BuildingInfo, Project, Complaint, User, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest } from './types';
 import { storage } from './utils/storage';
-import React, { useState, useEffect, useCallback } from 'react';
+import { User, BuildingInfo, Apartment, Expense, Payment, Project, Complaint, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest } from './types';
 
-const ConfigGuard: React.FC<{ isConfigured: boolean; children: React.ReactNode }> = ({ isConfigured, children }) => {
-  const location = useLocation();
-  if (!isConfigured && location.pathname !== '/setup') {
-    return <Navigate to="/setup" replace />;
-  }
-  return <>{children}</>;
-};
-
-// Composant Toast élégant
 const Toast: React.FC<{ message: string, type: 'success' | 'error' | 'info', onClose: () => void }> = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -39,414 +29,238 @@ const Toast: React.FC<{ message: string, type: 'success' | 'error' | 'info', onC
     info: 'bg-indigo-600 shadow-indigo-200'
   };
 
-  const icons = {
-    success: 'fa-circle-check',
-    error: 'fa-triangle-exclamation',
-    info: 'fa-circle-info'
-  };
-
   return (
     <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl text-white font-bold text-sm shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300 ${styles[type]}`}>
-      <i className={`fas ${icons[type]} text-lg`}></i>
+      <i className={`fas ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info'} text-lg`}></i>
       <span className="tracking-wide">{message}</span>
-      <button onClick={onClose} className="ml-4 opacity-50 hover:opacity-100 transition-opacity"><i className="fas fa-times"></i></button>
     </div>
   );
 };
 
-const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+const AppContent: React.FC = () => {
+  const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('syndic_session');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [language, setLanguage] = useState<'fr' | 'ar'>(() => {
-    return (localStorage.getItem('syndic_lang') as 'fr' | 'ar') || 'fr';
-  });
-
+  const [buildingInfo, setBuildingInfo] = useState<BuildingInfo | null>(null);
   const [apartments, setApartments] = useState<Apartment[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>([]);
   const [assets, setAssets] = useState<BuildingAsset[]>([]);
   const [assetPayments, setAssetPayments] = useState<AssetPayment[]>([]);
   const [profileRequests, setProfileRequests] = useState<ProfileRequest[]>([]);
-  
-  const [buildingInfo, setBuildingInfo] = useState<BuildingInfo>({
-    name: '', address: '', totalUnits: 0, unitsPerFloor: 0, numFloors: 0, 
-    defaultMonthlyFee: 50, isConfigured: false, autoRemindersEnabled: false, 
-    notificationsEnabled: false, reminderLanguage: 'fr', ownerInterfaceEnabled: false,
-    ownerShowBalance: false, ownerShowExpenseRegister: false, ownerCanCreateOps: false
-  });
-  const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>([]);
-
-  // État pour les notifications
+  const [isAppLoading, setIsAppLoading] = useState(true);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
 
   const notify = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setNotification({ message, type });
   };
 
-  const loadData = useCallback(() => {
+  const loadAllData = useCallback(() => {
     const { building, apartments: apts } = storage.loadBuildingData();
-    const { projects: proj, complaints: comp } = storage.loadOperations();
-    const { payments: pay, expenses: exp, assetPayments: aPay } = storage.loadAllYearlyData();
-    const reminders = storage.loadReminders();
-    const buildingAssets = storage.loadAssets();
-    const reqs = storage.loadProfileRequests();
-
-    if (building) {
-        if (building.ownerInterfaceEnabled === undefined) building.ownerInterfaceEnabled = false;
-        setBuildingInfo(building);
-    }
+    setBuildingInfo(building || {
+      name: '', address: '', totalUnits: 0, unitsPerFloor: 0, numFloors: 0, 
+      defaultMonthlyFee: 50, isConfigured: false, autoRemindersEnabled: false, 
+      notificationsEnabled: false, reminderLanguage: 'fr', ownerInterfaceEnabled: false,
+      ownerShowBalance: false, ownerShowExpenseRegister: false, ownerCanCreateOps: false
+    });
     setApartments(apts || []);
-    setProjects(proj || []);
-    setComplaints(comp || []);
-    setPayments(pay || []);
-    setExpenses(exp || []);
-    setAssetPayments(aPay || []);
-    setAssets(buildingAssets || []);
-    setReminderHistory(reminders || []);
-    setProfileRequests(reqs || []);
+    const financeData = storage.loadAllYearlyData();
+    setPayments(financeData.payments || []);
+    setExpenses(financeData.expenses || []);
+    setAssetPayments(financeData.assetPayments || []);
+    const ops = storage.loadOperations();
+    setProjects(ops.projects || []);
+    setComplaints(ops.complaints || []);
+    setReminderHistory(storage.loadReminders() || []);
+    setAssets(storage.loadAssets() || []);
+    setProfileRequests(storage.loadProfileRequests() || []);
+    setIsAppLoading(false);
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadAllData();
+  }, [loadAllData]);
 
-  const handleLogin = (user: User) => {
-    localStorage.setItem('syndic_session', JSON.stringify(user));
-    setCurrentUser(user);
-    if (user.language) {
-      setLanguage(user.language);
-      localStorage.setItem('syndic_lang', user.language);
-    }
-    notify(`Bienvenue ${user.username} !`);
+  const handleLogin = (u: User) => {
+    localStorage.setItem('syndic_session', JSON.stringify(u));
+    setUser(u);
+    notify(`Bienvenue ${u.username} !`);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('syndic_session');
-    setCurrentUser(null);
+    setUser(null);
     notify("Déconnexion réussie", "info");
   };
 
-  const toggleLanguage = (lang: 'fr' | 'ar') => {
-    setLanguage(lang);
-    localStorage.setItem('syndic_lang', lang);
-    notify(lang === 'fr' ? "Langue : Français" : "اللغة: العربية", "info");
-  };
+  if (isAppLoading) return null;
 
-  const handleTogglePayment = (aptId: string, month: number, year: number) => {
-    const apt = apartments.find(a => a.id === aptId);
-    if (!apt) return;
-
-    const existingIndex = payments.findIndex(p => p.apartmentId === aptId && p.month === month && p.year === year);
-    let newPayments = [...payments];
-
-    if (existingIndex > -1) {
-      newPayments.splice(existingIndex, 1);
-      notify(`Paiement annulé pour l'appartement ${apt.number}`, "info");
-    } else {
-      newPayments.push({
-        id: Date.now().toString(),
-        apartmentId: aptId,
-        month,
-        year,
-        amount: apt.monthlyFee,
-        paidDate: new Date().toISOString()
-      });
-      notify(`Paiement enregistré pour l'appartement ${apt.number}`);
-    }
-
-    setPayments(newPayments);
-    storage.saveYearlyFinance(year, newPayments, expenses, assetPayments);
-  };
-
-  const handleAdminProfileReview = (requestId: string, approved: boolean) => {
-    const updatedRequests = profileRequests.map(r => 
-      r.id === requestId ? { ...r, status: (approved ? 'approved' : 'rejected') as 'approved' | 'rejected' } : r
-    );
-
-    if (approved) {
-      const req = profileRequests.find(r => r.id === requestId);
-      if (req) {
-        const updatedApts = apartments.map(a => 
-          a.id === req.apartmentId ? { ...a, phone: req.newPhone } : a
-        );
-        setApartments(updatedApts);
-        storage.saveBuildingData(buildingInfo, updatedApts);
-      }
-    }
-
-    setProfileRequests(updatedRequests);
-    storage.saveProfileRequests(updatedRequests);
-  };
-
-  const handleProfileRequest = (req: ProfileRequest) => {
-    const updated = [req, ...profileRequests];
-    setProfileRequests(updated);
-    storage.saveProfileRequests(updated);
-  };
-
-  const handleDismissProfileRequest = (id: string) => {
-    const updated = profileRequests.filter(r => r.id !== id);
-    setProfileRequests(updated);
-    storage.saveProfileRequests(updated);
-  };
-
-  if (!currentUser) return <Login apartments={apartments} buildingInfo={buildingInfo} onLogin={handleLogin} />;
-
-  const isAdmin = currentUser.role === 'admin';
-  const myApartment = !isAdmin ? apartments.find(a => a.id === currentUser.apartmentId) : null;
-
-  if (!isAdmin && !buildingInfo.ownerInterfaceEnabled) {
-      return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white p-10 rounded-3xl shadow-2xl text-center space-y-4 max-w-sm">
-                <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-full flex items-center justify-center mx-auto text-2xl">
-                    <i className="fas fa-lock"></i>
-                </div>
-                <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Accès Désactivé</h2>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Le gestionnaire a temporairement désactivé l'accès propriétaire.</p>
-                <button onClick={handleLogout} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">Retour</button>
-            </div>
-        </div>
-      );
+  // 1. LOGIN D'ABORD
+  if (!user) {
+    return <Login apartments={apartments} buildingInfo={buildingInfo!} onLogin={handleLogin} />;
   }
 
+  const isAdmin = user.role === 'admin';
+  const myApartment = !isAdmin ? apartments.find(a => a.id === user.apartmentId) : null;
+
   return (
-    <HashRouter>
-      <Layout 
-        onLogout={handleLogout} 
-        currentUser={currentUser.username} 
-        role={currentUser.role} 
-        language={language}
-        onLanguageToggle={toggleLanguage}
-        badges={{ owners: profileRequests.filter(r => r.status === 'pending').length }}
-      >
-        <ConfigGuard isConfigured={buildingInfo.isConfigured}>
-          <Routes>
-            {isAdmin ? (
-              <>
-                <Route path="/" element={<Dashboard apartments={apartments} expenses={expenses} payments={payments} assetPayments={assetPayments} buildingInfo={buildingInfo} />} />
-                <Route path="/setup" element={
-                  <BuildingSetup 
-                    buildingInfo={buildingInfo} 
-                    onSave={(info, newApts) => {
-                      setBuildingInfo(info);
-                      if (newApts) {
-                        setApartments(newApts);
-                        storage.initialize(info, newApts);
-                        notify("Initialisation terminée !");
-                      } else {
-                        storage.saveBuildingData(info, apartments);
-                        notify("Paramètres sauvegardés");
-                      }
-                      loadData();
-                    }} 
-                    onImportFullDB={() => {}} 
-                    fullData={storage.getFullExport()} 
-                    currentApartmentsCount={apartments.length}
-                    onNotify={notify}
-                  />
-                } />
-                <Route path="/apartments" element={
-                  <Apartments 
-                    apartments={apartments} 
-                    payments={payments} 
-                    buildingInfo={buildingInfo} 
-                    onUpdate={(apt) => {
-                      const newApts = apartments.map(a => a.id === apt.id ? apt : a);
-                      setApartments(newApts);
-                      storage.saveBuildingData(buildingInfo, newApts);
-                      notify(`Appartement ${apt.number} mis à jour`);
-                    }} 
-                    onAdd={(apt) => {
-                      const newApts = [...apartments, apt];
-                      setApartments(newApts);
-                      storage.saveBuildingData(buildingInfo, newApts);
-                      notify(`Appartement ${apt.number} ajouté`);
-                    }} 
-                    onDelete={(id) => {
-                      const num = apartments.find(a => a.id === id)?.number;
-                      const newApts = apartments.filter(a => a.id !== id);
-                      setApartments(newApts);
-                      storage.saveBuildingData(buildingInfo, newApts);
-                      notify(`Appartement ${num} supprimé`, "info");
-                    }} 
-                  />
-                } />
-                <Route path="/payments" element={
-                  <Payments 
-                    apartments={apartments} 
-                    payments={payments} 
-                    buildingInfo={buildingInfo} 
-                    onTogglePayment={handleTogglePayment} 
-                    onNotify={notify}
-                    assets={assets}
-                    assetPayments={assetPayments}
-                    onAddAssetPayment={(p) => {
-                      const next = [...assetPayments, p];
-                      setAssetPayments(next);
-                      storage.saveYearlyFinance(p.year, payments, expenses, next);
-                      notify("Revenu encaissé !");
-                    }}
-                    onDeleteAssetPayment={(id) => {
-                      const p = assetPayments.find(item => item.id === id);
-                      const next = assetPayments.filter(item => item.id !== id);
-                      setAssetPayments(next);
-                      if (p) storage.saveYearlyFinance(p.year, payments, expenses, next);
-                      notify("Encaissement supprimé", "info");
-                    }}
-                  />
-                } />
-                <Route path="/expenses" element={
-                  <Expenses 
-                    expenses={expenses} 
-                    onAdd={(exp) => {
-                      const newExp = [...expenses, exp];
-                      setExpenses(newExp);
-                      storage.saveYearlyFinance(new Date(exp.date).getFullYear(), payments, newExp, assetPayments);
-                      notify("Dépense enregistrée");
-                    }} 
-                    onUpdate={(exp) => {
-                      const newExp = expenses.map(e => e.id === exp.id ? exp : e);
-                      setExpenses(newExp);
-                      storage.saveYearlyFinance(new Date(exp.date).getFullYear(), payments, newExp, assetPayments);
-                      notify("Dépense modifiée");
-                    }} 
-                    onDelete={(id) => {
-                      const newExp = expenses.filter(e => e.id !== id);
-                      setExpenses(newExp);
-                      const item = expenses.find(e => e.id === id);
-                      const year = item?.date ? new Date(item.date).getFullYear() : new Date().getFullYear();
-                      storage.saveYearlyFinance(year, payments, newExp, assetPayments);
-                      notify("Dépense supprimée", "info");
-                    }} 
-                  />
-                } />
-                <Route path="/owners" element={<Owners apartments={apartments} onUpdate={(apt) => {
-                  const newApts = apartments.map(a => a.id === apt.id ? apt : a);
-                  setApartments(newApts);
-                  storage.saveBuildingData(buildingInfo, newApts);
-                  notify(`Contact ${apt.owner} mis à jour`);
-                }} profileRequests={profileRequests.filter(r => r.status === 'pending')} onHandleProfileRequest={(id, app) => {
-                    handleAdminProfileReview(id, app);
-                    notify(app ? "Changement approuvé" : "Changement rejeté", app ? "success" : "info");
-                }} />} />
-                <Route path="/reminders" element={
-                  <ReminderCenter 
-                    apartments={apartments} 
-                    payments={payments} 
-                    buildingInfo={buildingInfo} 
-                    onUpdateBuilding={(info) => {
-                      setBuildingInfo(info);
-                      storage.saveBuildingData(info, apartments);
-                      notify("Configuration WhatsApp mise à jour");
-                    }} 
-                    reminderHistory={reminderHistory} 
-                    onAddReminderLog={(log) => {
-                      const newLogs = [...reminderHistory, log];
-                      setReminderHistory(newLogs);
-                      storage.saveReminders(newLogs);
-                      notify(`Rappel envoyé à ${log.ownerName}`);
-                    }} 
-                    onClearHistory={() => {
-                      setReminderHistory([]);
-                      storage.saveReminders([]);
-                      notify("Historique vidé", "info");
-                    }}
-                  />
-                } />
-                <Route path="/assets" element={
-                  <AssetsManager 
-                    assets={assets} 
-                    assetPayments={assetPayments} 
-                    onAddAsset={(a) => {
-                      const next = [...assets, a];
-                      setAssets(next);
-                      storage.saveAssets(next);
-                      notify("Nouveau bien ajouté");
-                    }} 
-                    onUpdateAsset={(a) => {
-                      const next = assets.map(item => item.id === a.id ? a : item);
-                      setAssets(next);
-                      storage.saveAssets(next);
-                      notify("Bien mis à jour");
-                    }} 
-                    onDeleteAsset={(id) => {
-                      const next = assets.filter(item => item.id !== id);
-                      setAssets(next);
-                      storage.saveAssets(next);
-                      notify("Bien supprimé", "info");
-                    }} 
-                    onAddPayment={(p) => {
-                      const next = [...assetPayments, p];
-                      setAssetPayments(next);
-                      storage.saveYearlyFinance(p.year, payments, expenses, next);
-                      notify("Revenu encaissé !");
-                    }} 
-                    onDeletePayment={(id) => {
-                      const p = assetPayments.find(item => item.id === id);
-                      const next = assetPayments.filter(item => item.id !== id);
-                      setAssetPayments(next);
-                      if (p) storage.saveYearlyFinance(p.year, payments, expenses, next);
-                      notify("Paiement supprimé", "info");
-                    }} 
-                  />
-                } />
-                <Route path="/reports" element={<Reports apartments={apartments} expenses={expenses} payments={payments} buildingInfo={buildingInfo} />} />
-                <Route path="/followup" element={
-                  <FollowUp 
-                    apartments={apartments} 
-                    projects={projects} 
-                    complaints={complaints} 
-                    currentUser={currentUser} 
-                    onRefresh={loadData} 
-                    buildingInfo={buildingInfo}
-                    language={language}
-                    onNotify={notify}
-                  />
-                } />
-              </>
+    <Layout 
+      currentUser={user.username} 
+      role={user.role} 
+      onLogout={handleLogout}
+      language={user.language || 'fr'}
+      onLanguageToggle={(lang) => {
+        const next = { ...user, language: lang };
+        setUser(next);
+        localStorage.setItem('syndic_session', JSON.stringify(next));
+      }}
+      badges={{ owners: profileRequests.filter(r => r.status === 'pending').length }}
+    >
+      <Routes>
+        {isAdmin ? (
+          <>
+            {/* Si admin mais non configuré, forcer la page setup avec le menu visible */}
+            {!buildingInfo?.isConfigured ? (
+              <Route path="*" element={<BuildingSetup 
+                buildingInfo={buildingInfo!} 
+                onSave={(info, apts) => {
+                  if (apts) storage.initialize(info, apts);
+                  else storage.saveBuildingData(info, apartments);
+                  loadAllData();
+                  notify("Configuration système validée !");
+                }}
+                onImportFullDB={() => {}}
+                fullData={storage.getFullExport()}
+                currentApartmentsCount={apartments.length}
+                onNotify={notify}
+              />} />
             ) : (
               <>
-                <Route path="/" element={<OwnerDashboard apartment={myApartment!} expenses={expenses} payments={payments} assetPayments={assetPayments} reminderHistory={reminderHistory} buildingInfo={buildingInfo} language={language} />} />
-                <Route path="/profile" element={<OwnerProfile apartment={myApartment!} onUpdateApt={(apt) => {
+                <Route path="/" element={<Dashboard apartments={apartments} expenses={expenses} payments={payments} assetPayments={assetPayments} buildingInfo={buildingInfo!} />} />
+                <Route path="/apartments" element={<Apartments apartments={apartments} payments={payments} buildingInfo={buildingInfo!} onUpdate={(apt) => {
                    const next = apartments.map(a => a.id === apt.id ? apt : a);
                    setApartments(next);
-                   storage.saveBuildingData(buildingInfo, next);
-                   notify("Profil mis à jour");
-                }} onRequestPhoneChange={(req) => {
-                    handleProfileRequest(req);
-                    notify("Demande envoyée au syndic", "info");
-                }} pendingRequests={profileRequests} onDismissRequest={handleDismissProfileRequest} language={language} />} />
-                <Route path="/followup" element={
-                  <FollowUp 
-                    apartments={apartments} 
-                    projects={projects} 
-                    complaints={complaints} 
-                    currentUser={currentUser} 
-                    onRefresh={loadData} 
-                    buildingInfo={buildingInfo}
-                    language={language}
-                    onNotify={notify}
-                  />
-                } />
+                   storage.saveBuildingData(buildingInfo!, next);
+                }} onAdd={(apt) => {
+                   const next = [...apartments, apt];
+                   setApartments(next);
+                   storage.saveBuildingData(buildingInfo!, next);
+                }} onDelete={(id) => {
+                   const next = apartments.filter(a => a.id !== id);
+                   setApartments(next);
+                   storage.saveBuildingData(buildingInfo!, next);
+                }} />} />
+                <Route path="/payments" element={<Payments 
+                  apartments={apartments} payments={payments} buildingInfo={buildingInfo!} 
+                  onTogglePayment={(aptId, month, year) => {
+                    const existing = payments.findIndex(p => p.apartmentId === aptId && p.month === month && p.year === year);
+                    let next = [...payments];
+                    if (existing > -1) next.splice(existing, 1);
+                    else {
+                      const apt = apartments.find(a => a.id === aptId);
+                      next.push({ id: Date.now().toString(), apartmentId: aptId, month, year, amount: apt?.monthlyFee || 0, paidDate: new Date().toISOString() });
+                    }
+                    setPayments(next);
+                    storage.saveYearlyFinance(year, next, expenses, assetPayments);
+                  }} 
+                  onNotify={notify} assets={assets} assetPayments={assetPayments}
+                  onAddAssetPayment={(p) => {
+                    const next = [...assetPayments, p];
+                    setAssetPayments(next);
+                    storage.saveYearlyFinance(p.year, payments, expenses, next);
+                  }}
+                  onDeleteAssetPayment={(id) => {
+                    const next = assetPayments.filter(item => item.id !== id);
+                    setAssetPayments(next);
+                    const p = assetPayments.find(i => i.id === id);
+                    if (p) storage.saveYearlyFinance(p.year, payments, expenses, next);
+                  }}
+                />} />
+                <Route path="/expenses" element={<Expenses 
+                  expenses={expenses} 
+                  onAdd={(e) => {
+                    const next = [...expenses, e];
+                    setExpenses(next);
+                    storage.saveYearlyFinance(new Date(e.date).getFullYear(), payments, next, assetPayments);
+                  }} 
+                  onUpdate={(e) => {
+                    const next = expenses.map(item => item.id === e.id ? e : item);
+                    setExpenses(next);
+                    storage.saveYearlyFinance(new Date(e.date).getFullYear(), payments, next, assetPayments);
+                  }} 
+                  onDelete={(id) => {
+                    const e = expenses.find(item => item.id === id);
+                    const next = expenses.filter(item => item.id !== id);
+                    setExpenses(next);
+                    if (e) storage.saveYearlyFinance(new Date(e.date).getFullYear(), payments, next, assetPayments);
+                  }} 
+                />} />
+                <Route path="/reports" element={<Reports apartments={apartments} expenses={expenses} payments={payments} assetPayments={assetPayments} buildingInfo={buildingInfo!} />} />
+                <Route path="/owners" element={<Owners apartments={apartments} onUpdate={(apt) => {
+                   const next = apartments.map(a => a.id === apt.id ? apt : a);
+                   setApartments(next);
+                   storage.saveBuildingData(buildingInfo!, next);
+                }} profileRequests={profileRequests} onHandleProfileRequest={(id, app) => {
+                   const updated = profileRequests.map(r => r.id === id ? { ...r, status: (app ? 'approved' : 'rejected') as any } : r);
+                   setProfileRequests(updated);
+                   storage.saveProfileRequests(updated);
+                }} />} />
+                <Route path="/reminders" element={<ReminderCenter 
+                   apartments={apartments} payments={payments} buildingInfo={buildingInfo!} 
+                   onUpdateBuilding={(info) => { setBuildingInfo(info); storage.saveBuildingData(info, apartments); }} 
+                   reminderHistory={reminderHistory} onAddReminderLog={(log) => {
+                     const next = [...reminderHistory, log];
+                     setReminderHistory(next);
+                     storage.saveReminders(next);
+                   }} 
+                />} />
+                <Route path="/assets" element={<AssetsManager 
+                   assets={assets} assetPayments={assetPayments} 
+                   onAddAsset={(a) => { const next = [...assets, a]; setAssets(next); storage.saveAssets(next); }} 
+                   onUpdateAsset={(a) => { const next = assets.map(i => i.id === a.id ? a : i); setAssets(next); storage.saveAssets(next); }} 
+                   onDeleteAsset={(id) => { const next = assets.filter(i => i.id !== id); setAssets(next); storage.saveAssets(next); }} 
+                   onAddPayment={(p) => { const next = [...assetPayments, p]; setAssetPayments(next); storage.saveYearlyFinance(p.year, payments, expenses, next); }} 
+                   onDeletePayment={(id) => { const p = assetPayments.find(i => i.id === id); const next = assetPayments.filter(i => i.id !== id); setAssetPayments(next); if(p) storage.saveYearlyFinance(p.year, payments, expenses, next); }}
+                />} />
+                <Route path="/setup" element={<BuildingSetup buildingInfo={buildingInfo!} onSave={(info) => { setBuildingInfo(info); storage.saveBuildingData(info, apartments); }} onImportFullDB={() => {}} fullData={storage.getFullExport()} currentApartmentsCount={apartments.length} onNotify={notify} />} />
               </>
             )}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </ConfigGuard>
-      </Layout>
-      {notification && (
-        <Toast 
-          message={notification.message} 
-          type={notification.type} 
-          onClose={() => setNotification(null)} 
-        />
-      )}
+          </>
+        ) : (
+          <>
+            <Route path="/" element={myApartment ? <OwnerDashboard apartment={myApartment} expenses={expenses} payments={payments} assetPayments={assetPayments} reminderHistory={reminderHistory} buildingInfo={buildingInfo!} language={user.language} /> : <Navigate to="/profile" />} />
+            <Route path="/profile" element={myApartment ? <OwnerProfile apartment={myApartment} onUpdateApt={(apt) => {
+               const next = apartments.map(a => a.id === apt.id ? apt : a);
+               setApartments(next);
+               storage.saveBuildingData(buildingInfo!, next);
+            }} onRequestPhoneChange={(req) => {
+               const next = [req, ...profileRequests];
+               setProfileRequests(next);
+               storage.saveProfileRequests(next);
+            }} pendingRequests={profileRequests} onDismissRequest={(id) => {
+               const next = profileRequests.filter(r => r.id !== id);
+               setProfileRequests(next);
+               storage.saveProfileRequests(next);
+            }} language={user.language} /> : <Navigate to="/" />} />
+          </>
+        )}
+        <Route path="/followup" element={<FollowUp apartments={apartments} projects={projects} complaints={complaints} currentUser={user} onRefresh={loadAllData} buildingInfo={buildingInfo!} language={user.language} onNotify={notify} />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+      {notification && <Toast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+    </Layout>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <HashRouter>
+      <AppContent />
     </HashRouter>
   );
 };
