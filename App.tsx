@@ -1,3 +1,4 @@
+
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -162,11 +163,6 @@ const App: React.FC = () => {
     storage.saveYearlyFinance(year, newPayments, expenses, assetPayments);
   };
 
-  // --- Profile Requests Handlers ---
-
-  /**
-   * Approves or rejects a profile update request from an owner.
-   */
   const handleAdminProfileReview = (requestId: string, approved: boolean) => {
     const updatedRequests = profileRequests.map(r => 
       r.id === requestId ? { ...r, status: (approved ? 'approved' : 'rejected') as 'approved' | 'rejected' } : r
@@ -187,18 +183,12 @@ const App: React.FC = () => {
     storage.saveProfileRequests(updatedRequests);
   };
 
-  /**
-   * Submits a new profile update request from an owner.
-   */
   const handleProfileRequest = (req: ProfileRequest) => {
     const updated = [req, ...profileRequests];
     setProfileRequests(updated);
     storage.saveProfileRequests(updated);
   };
 
-  /**
-   * Dismisses a rejected or processed request from the owner's view.
-   */
   const handleDismissProfileRequest = (id: string) => {
     const updated = profileRequests.filter(r => r.id !== id);
     setProfileRequests(updated);
@@ -287,7 +277,30 @@ const App: React.FC = () => {
                     }} 
                   />
                 } />
-                <Route path="/payments" element={<Payments apartments={apartments} payments={payments} buildingInfo={buildingInfo} onTogglePayment={handleTogglePayment} onNotify={notify} />} />
+                <Route path="/payments" element={
+                  <Payments 
+                    apartments={apartments} 
+                    payments={payments} 
+                    buildingInfo={buildingInfo} 
+                    onTogglePayment={handleTogglePayment} 
+                    onNotify={notify}
+                    assets={assets}
+                    assetPayments={assetPayments}
+                    onAddAssetPayment={(p) => {
+                      const next = [...assetPayments, p];
+                      setAssetPayments(next);
+                      storage.saveYearlyFinance(p.year, payments, expenses, next);
+                      notify("Revenu encaissé !");
+                    }}
+                    onDeleteAssetPayment={(id) => {
+                      const p = assetPayments.find(item => item.id === id);
+                      const next = assetPayments.filter(item => item.id !== id);
+                      setAssetPayments(next);
+                      if (p) storage.saveYearlyFinance(p.year, payments, expenses, next);
+                      notify("Encaissement supprimé", "info");
+                    }}
+                  />
+                } />
                 <Route path="/expenses" element={
                   <Expenses 
                     expenses={expenses} 
