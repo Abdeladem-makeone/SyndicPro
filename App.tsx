@@ -44,10 +44,13 @@ const App: React.FC = () => {
   const [assets, setAssets] = useState<BuildingAsset[]>([]);
   const [assetPayments, setAssetPayments] = useState<AssetPayment[]>([]);
   const [profileRequests, setProfileRequests] = useState<ProfileRequest[]>([]);
+  
+  // Added missing properties to BuildingInfo initial state
   const [buildingInfo, setBuildingInfo] = useState<BuildingInfo>({
     name: '', address: '', totalUnits: 0, unitsPerFloor: 0, numFloors: 0, 
     defaultMonthlyFee: 50, isConfigured: false, autoRemindersEnabled: false, 
-    notificationsEnabled: false, reminderLanguage: 'fr', ownerInterfaceEnabled: false
+    notificationsEnabled: false, reminderLanguage: 'fr', ownerInterfaceEnabled: false,
+    ownerShowBalance: false, ownerShowExpenseRegister: false, ownerCanCreateOps: false
   });
   const [reminderHistory, setReminderHistory] = useState<ReminderLog[]>([]);
 
@@ -317,13 +320,14 @@ const App: React.FC = () => {
                     complaints={complaints} 
                     currentUser={currentUser} 
                     onRefresh={loadData} 
+                    buildingInfo={buildingInfo}
                     language={language}
                   />
                 } />
               </>
             ) : (
               <>
-                <Route path="/" element={<OwnerDashboard apartment={myApartment!} expenses={expenses} payments={payments} assetPayments={assetPayments} reminderHistory={reminderHistory} language={language} />} />
+                <Route path="/" element={<OwnerDashboard apartment={myApartment!} expenses={expenses} payments={payments} assetPayments={assetPayments} reminderHistory={reminderHistory} buildingInfo={buildingInfo} language={language} />} />
                 <Route path="/profile" element={<OwnerProfile apartment={myApartment!} onUpdateApt={(apt) => {
                    const next = apartments.map(a => a.id === apt.id ? apt : a);
                    setApartments(next);
@@ -336,6 +340,7 @@ const App: React.FC = () => {
                     complaints={complaints} 
                     currentUser={currentUser} 
                     onRefresh={loadData} 
+                    buildingInfo={buildingInfo}
                     language={language}
                   />
                 } />

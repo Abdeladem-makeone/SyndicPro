@@ -37,10 +37,12 @@ const Login: React.FC<LoginProps> = ({ apartments, buildingInfo, onLogin }) => {
 
   const handleSyndicLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin') {
+    const storedPassword = buildingInfo.adminPassword || 'admin';
+    
+    if (username === 'admin' && password === storedPassword) {
       onLogin({ id: 'admin', username: 'Administrateur', role: 'admin' });
     } else {
-      setError('Identifiants Syndic incorrects (admin/admin).');
+      setError('Identifiants Syndic incorrects.');
       setTimeout(() => setError(''), 3000);
     }
   };

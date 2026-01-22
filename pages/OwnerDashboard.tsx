@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Apartment, Expense, Payment, AssetPayment, ReminderLog } from '../types';
+import { Apartment, Expense, Payment, AssetPayment, ReminderLog, BuildingInfo } from '../types';
 import { MONTHS } from '../constants';
 
 interface OwnerDashboardProps {
@@ -9,6 +9,7 @@ interface OwnerDashboardProps {
   payments: Payment[];
   assetPayments: AssetPayment[];
   reminderHistory: ReminderLog[];
+  buildingInfo: BuildingInfo;
   language?: 'fr' | 'ar';
 }
 
@@ -18,7 +19,7 @@ const MONTHS_AR = [
 ];
 
 const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ 
-  apartment, expenses, payments, assetPayments, reminderHistory, language = 'fr' 
+  apartment, expenses, payments, assetPayments, reminderHistory, buildingInfo, language = 'fr' 
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'finance' | 'notifications'>('finance');
 
@@ -79,32 +80,34 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* Header Statistique Simplifié */}
-      <div className="bg-slate-900 rounded-[2.5rem] p-8 sm:p-12 text-white shadow-2xl flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden group">
-         <div className="absolute top-0 right-0 p-8 opacity-5 text-9xl"><i className="fas fa-vault"></i></div>
-         <div className="relative z-10 text-center md:text-left">
-            <p className={`font-black text-teal-400 uppercase tracking-[0.3em] mb-3 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.balanceTitle}</p>
-            <h2 className="text-4xl sm:text-6xl font-black tracking-tighter flex items-baseline justify-center md:justify-start gap-2">
-              {currentBalance.toLocaleString()} <span className="text-xl font-bold text-slate-500">MAD</span>
-            </h2>
-            <p className={`mt-4 text-slate-400 font-medium max-w-xs ${isAr ? 'text-base' : 'text-xs'}`}>{t.balanceDesc}</p>
-         </div>
-         
-         <div className="relative z-10 bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-md max-w-sm text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-               <i className="fas fa-shield-check text-teal-400"></i>
-               <p className={`font-black uppercase tracking-widest text-teal-400 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.transparency}</p>
-            </div>
-            <p className={`text-slate-300 font-medium ${isAr ? 'text-base' : 'text-[11px]'}`}>{t.balanceDesc}</p>
-         </div>
-      </div>
+      {/* Header Statistique (Bannière Trésorerie) - Affichage Conditionnel */}
+      {buildingInfo.ownerShowBalance && (
+        <div className="bg-slate-900 rounded-[2.5rem] p-8 sm:p-12 text-white shadow-2xl flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden group">
+           <div className="absolute top-0 right-0 p-8 opacity-5 text-9xl"><i className="fas fa-vault"></i></div>
+           <div className="relative z-10 text-center md:text-left">
+              <p className={`font-black text-teal-400 uppercase tracking-[0.3em] mb-3 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.balanceTitle}</p>
+              <h2 className="text-4xl sm:text-6xl font-black tracking-tighter flex items-baseline justify-center md:justify-start gap-2">
+                {currentBalance.toLocaleString()} <span className="text-xl font-bold text-slate-500">MAD</span>
+              </h2>
+              <p className={`mt-4 text-slate-400 font-medium max-w-xs ${isAr ? 'text-base' : 'text-xs'}`}>{t.balanceDesc}</p>
+           </div>
+           
+           <div className="relative z-10 bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-md max-w-sm text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                 <i className="fas fa-shield-check text-teal-400"></i>
+                 <p className={`font-black uppercase tracking-widest text-teal-400 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.transparency}</p>
+              </div>
+              <p className={`text-slate-300 font-medium ${isAr ? 'text-base' : 'text-[11px]'}`}>{t.balanceDesc}</p>
+           </div>
+        </div>
+      )}
 
-      {/* Tabs Simplifiés */}
+      {/* Tabs */}
       <div className="flex gap-2">
          <button onClick={() => setActiveSubTab('finance')} className={`flex-1 sm:flex-none px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${activeSubTab === 'finance' ? 'bg-teal-700 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'} ${isAr ? 'text-sm' : 'text-[11px]'}`}>
            {t.paymentsTitle}
          </button>
-         <button onClick={() => setActiveSubTab('notifications')} className={`flex-1 sm:flex-none px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${activeSubTab === 'notifications' ? 'bg-teal-700 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200'} ${isAr ? 'text-sm' : 'text-[11px]'}`}>
+         <button onClick={() => setActiveSubTab('notifications')} className={`flex-1 sm:flex-none px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${activeSubTab === 'notifications' ? 'bg-teal-700 text-white shadow-lg' : 'text-slate-500 border border-slate-200'} ${isAr ? 'text-sm' : 'text-[11px]'}`}>
            {t.archiveTitle}
          </button>
       </div>
@@ -148,34 +151,37 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </div>
            </div>
 
-           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-8 border-b bg-slate-50/50 flex justify-between items-center">
-                 <h3 className={`font-black text-slate-800 uppercase tracking-widest ${isAr ? 'text-base' : 'text-xs'}`}>{t.registerTitle}</h3>
-              </div>
-              <div className="overflow-x-auto no-scrollbar">
-                 <table className="w-full text-left">
-                    <thead>
-                       <tr className="bg-slate-50/50 border-b">
-                          <th className={`px-8 py-5 font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-right text-sm' : 'text-left text-[10px]'}`}>{t.dateLabel}</th>
-                          <th className={`px-8 py-5 font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-right text-sm' : 'text-left text-[10px]'}`}>{t.descLabel}</th>
-                          <th className={`px-8 py-5 font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-left text-sm' : 'text-right text-[10px]'}`}>{t.amountLabel}</th>
-                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                       {expenses.filter(e => !e.excludedFromReports).slice().reverse().slice(0, 10).map(e => (
-                          <tr key={e.id} className="hover:bg-slate-50/50 transition-colors">
-                             <td className={`px-8 py-6 text-slate-500 font-medium whitespace-nowrap ${isAr ? 'text-base' : 'text-xs'}`}>{new Date(e.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</td>
-                             <td className="px-8 py-6">
-                                <p className={`font-bold text-slate-800 leading-snug ${isAr ? 'text-base' : 'text-sm'}`}>{e.description}</p>
-                                <p className={`font-black text-teal-600 uppercase mt-1 ${isAr ? 'text-xs' : 'text-[9px]'}`}>{e.category}</p>
-                             </td>
-                             <td className={`px-8 py-6 font-black text-slate-800 whitespace-nowrap ${isAr ? 'text-left text-base' : 'text-right text-sm'}`}>-{e.amount.toLocaleString()} <span className="text-[10px] opacity-40">MAD</span></td>
-                          </tr>
-                       ))}
-                    </tbody>
-                 </table>
-              </div>
-           </div>
+           {/* Registre des Dépenses - Affichage Conditionnel */}
+           {buildingInfo.ownerShowExpenseRegister && (
+             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+                <div className="p-8 border-b bg-slate-50/50 flex justify-between items-center">
+                   <h3 className={`font-black text-slate-800 uppercase tracking-widest ${isAr ? 'text-base' : 'text-xs'}`}>{t.registerTitle}</h3>
+                </div>
+                <div className="overflow-x-auto no-scrollbar">
+                   <table className="w-full text-left">
+                      <thead>
+                         <tr className="bg-slate-50/50 border-b">
+                            <th className={`px-8 py-5 font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-right text-sm' : 'text-left text-[10px]'}`}>{t.dateLabel}</th>
+                            <th className={`px-8 py-5 font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-right text-sm' : 'text-left text-[10px]'}`}>{t.descLabel}</th>
+                            <th className={`px-8 py-5 font-black text-slate-400 uppercase tracking-widest ${isAr ? 'text-left text-sm' : 'text-right text-[10px]'}`}>{t.amountLabel}</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                         {expenses.filter(e => !e.excludedFromReports).slice().reverse().slice(0, 10).map(e => (
+                            <tr key={e.id} className="hover:bg-slate-50/50 transition-colors">
+                               <td className={`px-8 py-6 text-slate-500 font-medium whitespace-nowrap ${isAr ? 'text-base' : 'text-xs'}`}>{new Date(e.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</td>
+                               <td className="px-8 py-6">
+                                  <p className={`font-bold text-slate-800 leading-snug ${isAr ? 'text-base' : 'text-sm'}`}>{e.description}</p>
+                                  <p className={`font-black text-teal-600 uppercase mt-1 ${isAr ? 'text-xs' : 'text-[9px]'}`}>{e.category}</p>
+                               </td>
+                               <td className={`px-8 py-6 font-black text-slate-800 whitespace-nowrap ${isAr ? 'text-left text-base' : 'text-right text-sm'}`}>-{e.amount.toLocaleString()} <span className="text-[10px] opacity-40">MAD</span></td>
+                            </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
+             </div>
+           )}
         </div>
       )}
 

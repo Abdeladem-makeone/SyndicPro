@@ -39,6 +39,15 @@ export interface BuildingInfo {
   whatsappDetailedTemplate?: string;
   lastSyncDate?: string;
   ownerInterfaceEnabled: boolean;
+  // Nouveaux réglages Propriétaires
+  ownerShowBalance: boolean;
+  ownerShowExpenseRegister: boolean;
+  ownerCanCreateOps: boolean;
+  // Champs Syndic
+  syndicContactNumber?: string;
+  whatsappApiKey?: string;
+  whatsappSenderNumber?: string;
+  adminPassword?: string;
 }
 
 export interface ReminderLog {
@@ -122,6 +131,7 @@ export interface Complaint {
   status: 'open' | 'pending' | 'resolved';
   priority: 'low' | 'medium' | 'high';
   authorName: string;
+  authorId?: string;
   attachments?: Attachment[]; 
 }
 

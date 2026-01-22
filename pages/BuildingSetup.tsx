@@ -17,6 +17,7 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
   onSave, 
 }) => {
   const [formData, setFormData] = useState<BuildingInfo>(buildingInfo);
+  const [activeTab, setActiveTab] = useState<'building' | 'syndic' | 'owners'>('building');
   const [loading, setLoading] = useState(false);
   const [virtualFiles, setVirtualFiles] = useState<{name: string, size: number}[]>([]);
   const navigate = useNavigate();
@@ -52,18 +53,23 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (deducedUnits <= 0) return alert("Veuillez définir une structure valide (Étages x Unités).");
-    
-    setLoading(true);
-    setTimeout(() => {
-      const apartmentsToSave = generateApartments();
-      const updatedInfo = { ...formData, totalUnits: deducedUnits, isConfigured: true };
-      onSave(updatedInfo, apartmentsToSave);
-      setLoading(false);
-      setVirtualFiles(storage.getVirtualFiles());
-      alert(`Initialisation réussie ! ${deducedUnits} appartements ont été créés.`);
-      navigate('/');
-    }, 1200);
+    if (activeTab === 'building') {
+      if (deducedUnits <= 0) return alert("Veuillez définir une structure valide (Étages x Unités).");
+      
+      setLoading(true);
+      setTimeout(() => {
+        const apartmentsToSave = generateApartments();
+        const updatedInfo = { ...formData, totalUnits: deducedUnits, isConfigured: true };
+        onSave(updatedInfo, apartmentsToSave);
+        setLoading(false);
+        setVirtualFiles(storage.getVirtualFiles());
+        alert(`Initialisation réussie ! ${deducedUnits} appartements ont été créés.`);
+        navigate('/');
+      }, 1200);
+    } else {
+      onSave(formData);
+      alert("Paramètres sauvegardés avec succès.");
+    }
   };
 
   const handleExportJSON = () => {
@@ -102,10 +108,9 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
     }
   };
 
-  const handleToggleOwnerInterface = () => {
-    const updated = { ...formData, ownerInterfaceEnabled: !formData.ownerInterfaceEnabled };
+  const toggleField = (field: keyof BuildingInfo) => {
+    const updated = { ...formData, [field]: !formData[field] };
     setFormData(updated);
-    // On sauvegarde immédiatement pour l'expérience utilisateur si le bâtiment est déjà configuré
     if (formData.isConfigured) {
         onSave(updated);
     }
@@ -139,86 +144,220 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
          </div>
       </div>
 
+      {/* Navigation Onglets */}
+      <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm w-fit overflow-x-auto no-scrollbar">
+         <button 
+           onClick={() => setActiveTab('building')} 
+           className={`px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'building' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+         >
+           <i className="fas fa-building mr-2"></i> Immeuble
+         </button>
+         <button 
+           onClick={() => setActiveTab('syndic')} 
+           className={`px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'syndic' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+         >
+           <i className="fas fa-user-shield mr-2"></i> Syndic
+         </button>
+         <button 
+           onClick={() => setActiveTab('owners')} 
+           className={`px-8 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'owners' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
+         >
+           <i className="fas fa-users-gear mr-2"></i> Propriétaires
+         </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Architecture Form */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-               <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Structure du Bâtiment</h3>
-               <i className="fas fa-building text-slate-400"></i>
+               <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">
+                 {activeTab === 'building' ? 'Structure du Bâtiment' : activeTab === 'syndic' ? 'Informations du Syndic' : 'Droits & Visibilité'}
+               </h3>
+               <i className={`fas ${activeTab === 'building' ? 'fa-building' : activeTab === 'syndic' ? 'fa-id-card' : 'fa-lock'} text-slate-400`}></i>
             </div>
             
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom de la Résidence</label>
-                  <input required type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-slate-50 font-bold outline-none transition-all" placeholder="Ex: Résidence Atlas" />
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {activeTab === 'building' && (
+                <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre d'Étages</label>
-                    <input required type="number" min="1" value={formData.numFloors} onChange={(e) => setFormData({...formData, numFloors: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom de la Résidence</label>
+                    <input required type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-slate-50 font-bold outline-none transition-all" placeholder="Ex: Résidence Atlas" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unités par étage</label>
-                    <input required type="number" min="1" value={formData.unitsPerFloor} onChange={(e) => setFormData({...formData, unitsPerFloor: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" />
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre d'Étages</label>
+                      <input required type="number" min="1" value={formData.numFloors} onChange={(e) => setFormData({...formData, numFloors: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unités par étage</label>
+                      <input required type="number" min="1" value={formData.unitsPerFloor} onChange={(e) => setFormData({...formData, unitsPerFloor: parseInt(e.target.value) || 0})} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" />
+                    </div>
                   </div>
-                </div>
 
-                <div className="p-6 bg-indigo-50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
-                      <i className="fas fa-money-bill-transfer text-sm"></i>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Cotisation par défaut</label>
-                      <p className="text-[9px] text-indigo-400 font-bold uppercase">Appliqué aux nouveaux appartements</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center bg-white rounded-lg border border-indigo-200 p-1">
-                    <input required type="number" value={formData.defaultMonthlyFee} onChange={(e) => setFormData({...formData, defaultMonthlyFee: parseInt(e.target.value) || 0})} className="w-20 px-2 py-2 text-indigo-700 font-black text-center outline-none text-sm" />
-                    <span className="px-3 text-[10px] font-black text-indigo-400">DH</span>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${formData.ownerInterfaceEnabled ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-400'}`}>
-                      <i className={`fas ${formData.ownerInterfaceEnabled ? 'fa-eye' : 'fa-eye-slash'} text-sm`}></i>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Interface Propriétaires</label>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase">Permettre l'accès aux résidents</p>
-                    </div>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={handleToggleOwnerInterface}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${formData.ownerInterfaceEnabled ? 'bg-teal-600' : 'bg-slate-300'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.ownerInterfaceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-
-                <div className="bg-slate-900 p-6 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-6">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center text-white text-xl border border-white/10"><i className="fas fa-layer-group"></i></div>
+                  <div className="p-6 bg-indigo-50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
+                        <i className="fas fa-money-bill-transfer text-sm"></i>
+                      </div>
                       <div>
-                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Total à générer</span>
-                         <span className="text-xl font-black text-white">{deducedUnits} Appartements</span>
+                        <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Cotisation par défaut</label>
+                        <p className="text-[9px] text-indigo-400 font-bold uppercase">Appliqué aux nouveaux appartements</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center bg-white rounded-lg border border-indigo-200 p-1">
+                      <input required type="number" value={formData.defaultMonthlyFee} onChange={(e) => setFormData({...formData, defaultMonthlyFee: parseInt(e.target.value) || 0})} className="w-20 px-2 py-2 text-indigo-700 font-black text-center outline-none text-sm" />
+                      <span className="px-3 text-[10px] font-black text-indigo-400">DH</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 p-6 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-6">
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center text-white text-xl border border-white/10"><i className="fas fa-layer-group"></i></div>
+                        <div>
+                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Total à générer</span>
+                           <span className="text-xl font-black text-white">{deducedUnits} Appartements</span>
+                        </div>
+                     </div>
+                     <button type="submit" className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20">
+                        Initialiser la base
+                     </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'syndic' && (
+                <div className="space-y-6">
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Numéro de Contact Syndic</label>
+                      <div className="relative">
+                         <i className="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                         <input type="text" value={formData.syndicContactNumber || ''} onChange={(e) => setFormData({...formData, syndicContactNumber: e.target.value})} className="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" placeholder="Ex: 06 00 00 00 00" />
                       </div>
                    </div>
-                   <button type="submit" className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20">
-                      Initialiser la base
+
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clé API WhatsApp (Provider)</label>
+                      <div className="relative">
+                         <i className="fas fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                         <input type="password" value={formData.whatsappApiKey || ''} onChange={(e) => setFormData({...formData, whatsappApiKey: e.target.value})} className="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" placeholder="••••••••••••••••" />
+                      </div>
+                   </div>
+
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Numéro de Communication (Envois)</label>
+                      <div className="relative">
+                         <i className="fab fa-whatsapp absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                         <input type="text" value={formData.whatsappSenderNumber || ''} onChange={(e) => setFormData({...formData, whatsappSenderNumber: e.target.value})} className="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold outline-none" placeholder="Numéro utilisé pour OTP et rappels" />
+                      </div>
+                   </div>
+
+                   <div className="p-6 bg-rose-50 rounded-2xl border border-rose-100 space-y-4">
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-rose-600 shadow-sm border border-rose-100">
+                           <i className="fas fa-lock text-sm"></i>
+                         </div>
+                         <div>
+                           <label className="text-[10px] font-black text-rose-900 uppercase tracking-widest">Mot de passe Administrateur</label>
+                           <p className="text-[9px] text-rose-400 font-bold uppercase">Sécurise l'accès à cet espace</p>
+                         </div>
+                      </div>
+                      <input type="password" value={formData.adminPassword || ''} onChange={(e) => setFormData({...formData, adminPassword: e.target.value})} className="w-full px-4 py-3 border border-rose-200 rounded-xl bg-white font-black text-rose-600 outline-none focus:ring-2 focus:ring-rose-500" placeholder="Nouveau mot de passe (laisser vide pour 'admin')" />
+                   </div>
+
+                   <button type="submit" className="w-full py-4 bg-slate-800 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-900 transition-all shadow-xl">
+                      Sauvegarder les infos Syndic
                    </button>
                 </div>
-              </div>
+              )}
+
+              {activeTab === 'owners' && (
+                <div className="space-y-6">
+                  {/* Toggle Global */}
+                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${formData.ownerInterfaceEnabled ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-200 text-slate-400'}`}>
+                        <i className={`fas ${formData.ownerInterfaceEnabled ? 'fa-unlock' : 'fa-lock'} text-sm`}></i>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block">Accès Propriétaire (Login)</label>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase">Permettre aux résidents de se connecter</p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => toggleField('ownerInterfaceEnabled')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.ownerInterfaceEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.ownerInterfaceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+
+                  {formData.ownerInterfaceEnabled && (
+                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                      {/* Afficher Trésorerie */}
+                      <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.ownerShowBalance ? 'bg-teal-50 text-teal-600' : 'bg-slate-50 text-slate-300'}`}>
+                             <i className="fas fa-sack-dollar"></i>
+                           </div>
+                           <div>
+                             <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Barre de Trésorerie</label>
+                             <p className="text-[9px] text-slate-400 font-medium">Afficher le solde global de la résidence</p>
+                           </div>
+                        </div>
+                        <button type="button" onClick={() => toggleField('ownerShowBalance')} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${formData.ownerShowBalance ? 'bg-teal-500' : 'bg-slate-200'}`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${formData.ownerShowBalance ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Afficher Registre des dépenses */}
+                      <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.ownerShowExpenseRegister ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-300'}`}>
+                             <i className="fas fa-list-check"></i>
+                           </div>
+                           <div>
+                             <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Registre des Dépenses</label>
+                             <p className="text-[9px] text-slate-400 font-medium">Afficher le détail des factures payées</p>
+                           </div>
+                        </div>
+                        <button type="button" onClick={() => toggleField('ownerShowExpenseRegister')} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${formData.ownerShowExpenseRegister ? 'bg-amber-500' : 'bg-slate-200'}`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${formData.ownerShowExpenseRegister ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+
+                      {/* Autoriser Création Ops */}
+                      <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-4">
+                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.ownerCanCreateOps ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}>
+                             <i className="fas fa-plus-circle"></i>
+                           </div>
+                           <div>
+                             <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">Création Projets / Réclamations</label>
+                             <p className="text-[9px] text-slate-400 font-medium">Permettre aux propriétaires de créer des entrées</p>
+                           </div>
+                        </div>
+                        <button type="button" onClick={() => toggleField('ownerCanCreateOps')} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${formData.ownerCanCreateOps ? 'bg-indigo-500' : 'bg-slate-200'}`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${formData.ownerCanCreateOps ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!formData.ownerInterfaceEnabled && (
+                    <div className="py-10 text-center opacity-40">
+                      <i className="fas fa-user-lock text-4xl mb-3"></i>
+                      <p className="text-xs font-bold uppercase tracking-widest">L'interface est désactivée.</p>
+                    </div>
+                  )}
+
+                  <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 mt-4">
+                    Sauvegarder les droits
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>
 
-        {/* Data Management Section */}
+        {/* Data Management Section (Inchangé) */}
         <div className="lg:col-span-5 space-y-6">
            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[500px]">
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
