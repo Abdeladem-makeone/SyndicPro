@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -160,15 +159,24 @@ const AppContent: React.FC = () => {
                 <Route path="/payments" element={<Payments 
                   apartments={apartments} payments={payments} buildingInfo={buildingInfo!} 
                   onTogglePayment={(aptId, month, year) => {
-                    const existing = payments.findIndex(p => p.apartmentId === aptId && p.month === month && p.year === year);
-                    let next = [...payments];
-                    if (existing > -1) next.splice(existing, 1);
-                    else {
-                      const apt = apartments.find(a => a.id === aptId);
-                      next.push({ id: Date.now().toString(), apartmentId: aptId, month, year, amount: apt?.monthlyFee || 0, paidDate: new Date().toISOString() });
-                    }
-                    setPayments(next);
-                    storage.saveYearlyFinance(year, next, expenses, assetPayments);
+                    setPayments(prev => {
+                      const existing = prev.findIndex(p => p.apartmentId === aptId && p.month === month && p.year === year);
+                      let next = [...prev];
+                      if (existing > -1) next.splice(existing, 1);
+                      else {
+                        const apt = apartments.find(a => a.id === aptId);
+                        next.push({ 
+                          id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, 
+                          apartmentId: aptId, 
+                          month, 
+                          year, 
+                          amount: apt?.monthlyFee || 0, 
+                          paidDate: new Date().toISOString() 
+                        });
+                      }
+                      storage.saveYearlyFinance(year, next, expenses, assetPayments);
+                      return next;
+                    });
                   }} 
                   onNotify={notify} assets={assets} assetPayments={assetPayments}
                   onAddAssetPayment={(p) => {
