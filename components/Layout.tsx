@@ -40,6 +40,7 @@ const Layout: React.FC<LayoutProps> = ({
       reminders: 'Relances WhatsApp',
       assets: 'Revenus Biens',
       reports: 'Bilans & Rapports',
+      documents: 'Documents',
       setup: 'Configuration',
       logout: 'Déconnexion',
       welcome: 'Bienvenue',
@@ -57,6 +58,7 @@ const Layout: React.FC<LayoutProps> = ({
       reminders: 'مركز التذكير',
       assets: 'تسيير الممتلكات',
       reports: 'التقارير والبيانات',
+      documents: 'المستندات',
       setup: 'الإعدادات',
       logout: 'تسجيل الخروج',
       welcome: 'مرحباً',
@@ -71,7 +73,7 @@ const Layout: React.FC<LayoutProps> = ({
   const handleLogoutClick = () => setShowLogoutModal(true);
   const confirmLogout = () => { setShowLogoutModal(false); onLogout(); };
 
-  // --- RENDU ADMIN (INCHANGÉ COMME DEMANDÉ) ---
+  // --- RENDU ADMIN ---
   if (isAdmin) {
     const navGroups = [
       {
@@ -88,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({
         ]
       },
       {
-        title: 'Finances',
+        title: 'Finances & Patrimoine',
         items: [
           { path: '/payments', label: t.payments, icon: 'fa-money-check-dollar' },
           { path: '/expenses', label: t.expenses, icon: 'fa-file-invoice-dollar' },
@@ -97,8 +99,9 @@ const Layout: React.FC<LayoutProps> = ({
         ]
       },
       {
-        title: 'Opérations',
+        title: 'Ressources',
         items: [
+          { path: '/documents', label: t.documents, icon: 'fa-folder-tree' },
           { path: '/followup', label: t.followup, icon: 'fa-list-check' },
           { path: '/reminders', label: t.reminders, icon: 'fa-whatsapp' },
         ]
@@ -187,13 +190,12 @@ const Layout: React.FC<LayoutProps> = ({
            <div className="p-8">{children}</div>
         </main>
 
-        {/* Fix: Passed the missing isAr argument to renderLogoutModal to match its definition */}
         {showLogoutModal && renderLogoutModal(confirmLogout, () => setShowLogoutModal(false), t.logout, isAr)}
       </div>
     );
   }
 
-  // --- RENDU PROPRIÉTAIRE (AMÉLIORÉ) ---
+  // --- RENDU PROPRIÉTAIRE ---
   const OWNER_NAV = [
     { path: '/', label: t.ownerDash, icon: 'fa-magnifying-glass-chart' },
     { path: '/followup', label: t.followup, icon: 'fa-house-chimney-window' },

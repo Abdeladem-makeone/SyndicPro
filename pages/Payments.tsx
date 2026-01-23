@@ -10,7 +10,6 @@ interface PaymentsProps {
   buildingInfo: BuildingInfo;
   onTogglePayment: (aptId: string, month: number, year: number) => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
-  // Nouvelles props pour les biens
   assets: BuildingAsset[];
   assetPayments: AssetPayment[];
   onAddAssetPayment: (pay: AssetPayment) => void;
@@ -28,7 +27,6 @@ const Payments: React.FC<PaymentsProps> = ({
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [searchTerm, setSearchTerm] = useState('');
   
-  // États pour le modal d'encaissement des biens
   const [showAssetPayModal, setShowAssetPayModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<BuildingAsset | null>(null);
   const [assetPayForm, setAssetPayForm] = useState({
@@ -66,7 +64,6 @@ const Payments: React.FC<PaymentsProps> = ({
         return { expected, collected, remaining: expected - collected, rate: expected > 0 ? (collected / expected) * 100 : 0 };
       }
     } else {
-      // Stats pour les biens
       const expected = assets.reduce((sum, a) => sum + (a.frequency === 'monthly' ? a.incomeAmount * 12 : a.incomeAmount), 0);
       const collected = assetPayments
         .filter(p => p.year === selectedYear)
@@ -88,16 +85,46 @@ const Payments: React.FC<PaymentsProps> = ({
 
   const handleSaveAssetPayment = () => {
     if (!selectedAsset) return;
-    const period = selectedAsset.frequency === 'monthly' ? `${MONTHS[assetPayForm.month]} ${assetPayForm.year}` : `Année ${assetPayForm.year}`;
+
+    // --- CONTRÔLES LOGIQUES ---
+    const isMonthly = selectedAsset.frequency === 'monthly';
+    const periodLabel = isMonthly ? `${MONTHS[assetPayForm.month]} ${assetPayForm.year}` : `Année ${assetPayForm.year}`;
+
+    // Vérifier si cette période est déjà payée
+    const alreadyPaid = assetPayments.some(p => {
+      const sameAsset = p.assetId === selectedAsset.id;
+      if (!sameAsset) return false;
+      
+      if (isMonthly) {
+        // Pour le mensuel : vérifier le mois ET l'année exacts via le libellé de période
+        return p.period === periodLabel;
+      } else {
+        // Pour l'annuel : vérifier simplement l'année
+        return p.year === assetPayForm.year;
+      }
+    });
+
+    if (alreadyPaid) {
+      onNotify?.(`Erreur : Un encaissement a déjà été enregistré pour ${periodLabel}.`, "error");
+      return;
+    }
+
+    if (assetPayForm.amount <= 0) {
+      onNotify?.("Veuillez saisir un montant valide.", "error");
+      return;
+    }
+
     onAddAssetPayment({
       id: Date.now().toString(),
       assetId: selectedAsset.id,
       amount: assetPayForm.amount,
       date: assetPayForm.date,
-      period,
+      period: periodLabel,
       year: assetPayForm.year
     });
+    
     setShowAssetPayModal(false);
+    onNotify?.("Encaissement validé avec succès.");
   };
 
   const handleExportPDF = () => {
@@ -133,7 +160,6 @@ const Payments: React.FC<PaymentsProps> = ({
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Sélecteur de catégorie principal */}
       <div className="flex bg-white p-1.5 rounded-[2rem] border border-slate-200 shadow-sm w-fit">
          <button 
            onClick={() => setActiveTab('apartments')} 
@@ -308,7 +334,6 @@ const Payments: React.FC<PaymentsProps> = ({
           </div>
         </div>
       ) : (
-        /* VUE REVENUS DES BIENS */
         <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {assets.map(asset => {
@@ -337,7 +362,7 @@ const Payments: React.FC<PaymentsProps> = ({
                         </div>
                      </div>
                      <button 
-                       onClick={() => { setSelectedAsset(asset); setAssetPayForm({...assetPayForm, amount: asset.incomeAmount, year: selectedYear}); setShowAssetPayModal(true); }}
+                       onClick={() => { setSelectedAsset(asset); setAssetPayForm({...assetPayForm, amount: asset.incomeAmount, year: selectedYear, month: new Date().getMonth()}); setShowAssetPayModal(true); }}
                        className="mt-6 w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
                      >
                        <i className="fas fa-sack-dollar"></i> Encaisser Revenu
@@ -347,12 +372,11 @@ const Payments: React.FC<PaymentsProps> = ({
               })}
               {assets.length === 0 && (
                 <div className="col-span-full py-16 text-center bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                   <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Aucun bien configuré. Allez dans "Configuration Biens" pour en ajouter.</p>
+                   <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Aucun bien configuré.</p>
                 </div>
               )}
            </div>
 
-           {/* Historique des encaissements des biens pour l'année sélectionnée */}
            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b bg-slate-50/50 flex justify-between items-center">
                  <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Journal des Revenus Divers ({selectedYear})</h3>
@@ -393,7 +417,6 @@ const Payments: React.FC<PaymentsProps> = ({
         </div>
       )}
 
-      {/* MODAL ENCAISSEMENT BIEN */}
       {showAssetPayModal && selectedAsset && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl animate-in zoom-in duration-200 overflow-hidden">

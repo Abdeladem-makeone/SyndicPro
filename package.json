@@ -11,11 +11,11 @@
   "dependencies": {
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "@google/genai": "^1.38.0",
     "react-router-dom": "^7.12.0",
-    "recharts": "^3.6.0",
-    "@google/genai": "^1.36.0",
-    "jspdf": "^2.5.1",
-    "jspdf-autotable": "^3.8.2"
+    "recharts": "^3.7.0",
+    "jspdf": "^4.0.0",
+    "jspdf-autotable": "^5.0.7"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

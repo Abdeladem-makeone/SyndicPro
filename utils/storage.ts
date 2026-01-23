@@ -1,5 +1,5 @@
 
-import { BuildingInfo, Apartment, Expense, Payment, Project, Complaint, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest } from '../types';
+import { BuildingInfo, Apartment, Expense, Payment, Project, Complaint, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest, AppDocument } from '../types';
 
 const STORAGE_PREFIX = 'syndic_v4_';
 const DATA_PATHS = {
@@ -8,6 +8,7 @@ const DATA_PATHS = {
   OPS: 'syndic_storage/ops_projects_complaints.json',
   REMINDERS: 'syndic_storage/reminder_logs.json',
   PROFILE_REQS: 'syndic_storage/profile_requests.json',
+  DOCUMENTS: 'syndic_storage/app_documents.json',
   COTIS_PREFIX: 'syndic_storage/cotis_',
   ASSET_PAY_PREFIX: 'syndic_storage/asset_pay_',
 };
@@ -17,7 +18,7 @@ const safeSetItem = (key: string, value: string) => {
     localStorage.setItem(STORAGE_PREFIX + key, value);
   } catch (e) {
     if (e instanceof DOMException) {
-      alert("⚠️ Stockage plein : Impossible d'enregistrer les fichiers joints (trop volumineux pour le navigateur).");
+      alert("⚠️ Stockage plein : Impossible d'enregistrer les fichiers (trop volumineux pour le navigateur).");
     }
   }
 };
@@ -33,6 +34,7 @@ export const storage = {
     safeSetItem(DATA_PATHS.OPS, JSON.stringify({ projects: [], complaints: [], created: new Date().toISOString() }));
     safeSetItem(DATA_PATHS.REMINDERS, JSON.stringify([]));
     safeSetItem(DATA_PATHS.PROFILE_REQS, JSON.stringify([]));
+    safeSetItem(DATA_PATHS.DOCUMENTS, JSON.stringify([]));
   },
 
   saveBuildingData: (building: BuildingInfo, apartments: Apartment[]) => {
@@ -68,6 +70,15 @@ export const storage = {
 
   loadProfileRequests: (): ProfileRequest[] => {
     const data = safeGetItem(DATA_PATHS.PROFILE_REQS);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveDocuments: (docs: AppDocument[]) => {
+    safeSetItem(DATA_PATHS.DOCUMENTS, JSON.stringify(docs));
+  },
+
+  loadDocuments: (): AppDocument[] => {
+    const data = safeGetItem(DATA_PATHS.DOCUMENTS);
     return data ? JSON.parse(data) : [];
   },
 
@@ -163,8 +174,17 @@ export const storage = {
     const keysToDelete = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith(STORAGE_PREFIX)) keysToDelete.push(key);
+      if (key?.startsWith(STORAGE_PREFIX)) {
+        const keyVal = STORAGE_PREFIX + key;
+        localStorage.removeItem(keyVal);
+      }
     }
-    keysToDelete.forEach(k => localStorage.removeItem(k));
+    // Corrected to actually iterate properly
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(STORAGE_PREFIX)) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
   }
 };

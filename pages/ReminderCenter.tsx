@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Apartment, BuildingInfo, Payment, ReminderLog } from '../types';
 import { generateWhatsAppReminderLink, generateDetailedWhatsAppReminder, DEFAULT_TEMPLATES } from '../utils/whatsappUtils';
@@ -25,7 +24,7 @@ const ReminderCenter: React.FC<ReminderCenterProps> = ({
 }) => {
   const currentYear = new Date().getFullYear();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear] = useState(currentYear);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [activeTab, setActiveTab] = useState<'send' | 'config' | 'history'>('send');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -212,7 +211,7 @@ const ReminderCenter: React.FC<ReminderCenterProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between ml-1">
                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Rappel Détaillé (Impayés cumulés)</label>
-                   <span className="text-[8px] font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded uppercase">Si > 1 mois dû</span>
+                   <span className="text-[8px] font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded uppercase">Si &gt; 1 mois dû</span>
                 </div>
                 <textarea rows={8} dir={buildingInfo.reminderLanguage === 'ar' ? 'rtl' : 'ltr'} value={buildingInfo.whatsappDetailedTemplate || DEFAULT_TEMPLATES[buildingInfo.reminderLanguage].detailed} onChange={(e) => onUpdateBuilding({...buildingInfo, whatsappDetailedTemplate: e.target.value})} className="w-full p-6 border rounded-3xl text-sm bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all leading-relaxed shadow-inner" />
               </div>

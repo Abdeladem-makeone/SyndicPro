@@ -13,6 +13,16 @@ export interface Attachment {
   type: string; // mimeType
 }
 
+export interface AppDocument {
+  id: string;
+  name: string;
+  category: 'invoice' | 'quote' | 'contract' | 'other';
+  type: string; // mimeType
+  data: string; // base64
+  date: string;
+  size: number;
+}
+
 export interface ProfileRequest {
   id: string;
   apartmentId: string;

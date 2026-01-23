@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -14,6 +15,7 @@ import ReminderCenter from './pages/ReminderCenter';
 import AssetsManager from './pages/AssetsManager';
 import OwnerDashboard from './pages/OwnerDashboard';
 import OwnerProfile from './pages/OwnerProfile';
+import Documents from './pages/Documents';
 import { storage } from './utils/storage';
 import { User, BuildingInfo, Apartment, Expense, Payment, Project, Complaint, ReminderLog, BuildingAsset, AssetPayment, ProfileRequest } from './types';
 
@@ -227,6 +229,7 @@ const AppContent: React.FC = () => {
                    onAddPayment={(p) => { const next = [...assetPayments, p]; setAssetPayments(next); storage.saveYearlyFinance(p.year, payments, expenses, next); }} 
                    onDeletePayment={(id) => { const p = assetPayments.find(i => i.id === id); const next = assetPayments.filter(i => i.id !== id); setAssetPayments(next); if(p) storage.saveYearlyFinance(p.year, payments, expenses, next); }}
                 />} />
+                <Route path="/documents" element={<Documents />} />
                 <Route path="/setup" element={<BuildingSetup buildingInfo={buildingInfo!} onSave={(info) => { setBuildingInfo(info); storage.saveBuildingData(info, apartments); }} onImportFullDB={() => {}} fullData={storage.getFullExport()} currentApartmentsCount={apartments.length} onNotify={notify} />} />
               </>
             )}
