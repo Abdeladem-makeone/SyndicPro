@@ -44,7 +44,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       dateLabel: 'Date d\'opération',
       descLabel: 'Description',
       amountLabel: 'Montant',
-      months: MONTHS
+      months: MONTHS,
+      overdueTitle: 'Mois en retard',
+      overdueDesc: 'Vous avez des cotisations non régularisées',
+      totalOverdue: 'Total restant dû',
+      monthShort: 'Mois'
     },
     ar: {
       balanceTitle: 'حالة الخزينة',
@@ -62,7 +66,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       dateLabel: 'تاريخ العملية',
       descLabel: 'الوصف',
       amountLabel: 'المبلغ',
-      months: MONTHS_AR
+      months: MONTHS_AR,
+      overdueTitle: 'أشهر متأخرة',
+      overdueDesc: 'لديك مساهمات لم يتم تسويتها بعد',
+      totalOverdue: 'إجمالي المتأخرات',
+      monthShort: 'شهر'
     }
   };
 
@@ -71,6 +79,18 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   // Filtrage des données personnelles
   const myPayments = payments.filter(p => p.apartmentId === apartment.id && p.year === currentYear);
   const myNotifications = reminderHistory.filter(r => r.apartmentId === apartment.id);
+
+  // Calcul des mois en retard
+  const overdueMonths = [];
+  for (let m = 0; m <= currentMonth; m++) {
+    if (!myPayments.some(p => p.month === m)) {
+      overdueMonths.push({
+        index: m,
+        name: t.months[m]
+      });
+    }
+  }
+  const totalOverdueAmount = overdueMonths.length * apartment.monthlyFee;
 
   // Calculs financiers globaux
   const totalAptRevenue = payments.reduce((s, p) => s + p.amount, 0);
@@ -99,6 +119,32 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </div>
               <p className={`text-slate-300 font-medium ${isAr ? 'text-base' : 'text-[11px]'}`}>{t.balanceDesc}</p>
            </div>
+        </div>
+      )}
+
+      {/* Section Mois en Retard (Alerte Visuelle) */}
+      {overdueMonths.length > 0 && activeSubTab === 'finance' && (
+        <div className="bg-rose-50 border border-rose-100 rounded-[2rem] p-8 flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-6 text-center md:text-left">
+            <div className="w-16 h-16 bg-rose-500 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-rose-200 animate-pulse">
+              <i className="fas fa-clock-rotate-left"></i>
+            </div>
+            <div>
+              <h3 className={`font-black text-rose-900 ${isAr ? 'text-2xl' : 'text-xl'}`}>{t.overdueTitle}</h3>
+              <p className={`font-bold text-rose-600/70 uppercase tracking-widest mt-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.overdueDesc}</p>
+              <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
+                {overdueMonths.map(m => (
+                  <span key={m.index} className="px-3 py-1 bg-rose-200/50 text-rose-800 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-200">
+                    {m.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="bg-white px-8 py-6 rounded-3xl border border-rose-200 text-center shadow-sm min-w-[200px]">
+             <p className={`font-black text-rose-500 uppercase tracking-widest mb-1 ${isAr ? 'text-sm' : 'text-[10px]'}`}>{t.totalOverdue}</p>
+             <p className="text-3xl font-black text-rose-800">{totalOverdueAmount.toLocaleString()} <span className="text-sm font-bold uppercase">DH</span></p>
+          </div>
         </div>
       )}
 
