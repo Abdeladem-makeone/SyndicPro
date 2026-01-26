@@ -2,6 +2,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import anime from 'animejs';
+import { getActiveTheme } from '../utils/themes';
+import { AppThemeId } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +12,7 @@ interface LayoutProps {
   role: 'admin' | 'owner';
   language?: 'fr' | 'ar';
   onLanguageToggle?: (lang: 'fr' | 'ar') => void;
+  activeTheme?: AppThemeId;
   badges?: {
     owners?: number;
     followup?: number;
@@ -23,12 +26,14 @@ const Layout: React.FC<LayoutProps> = ({
   role, 
   language = 'fr', 
   onLanguageToggle,
+  activeTheme = 'oceon',
   badges 
 }) => {
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const isAdmin = role === 'admin';
   const isAr = language === 'ar';
+  const theme = getActiveTheme(activeTheme);
 
   useEffect(() => {
     (anime as any)({
@@ -92,14 +97,14 @@ const Layout: React.FC<LayoutProps> = ({
   ];
 
   return (
-    <div className={`flex min-h-screen bg-slate-50 ${isAr ? 'flex-row-reverse' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`flex min-h-screen ${theme.appBg} ${isAr ? 'flex-row-reverse' : ''}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* SIDEBAR */}
-      <aside className="w-72 bg-white border-x border-slate-100 flex flex-col sticky top-0 h-screen z-50 no-print">
+      <aside className={`w-72 ${theme.sidebarBg} border-x border-slate-100 flex flex-col sticky top-0 h-screen z-50 no-print`}>
          <div className="p-8 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+            <div className={`w-10 h-10 bg-${theme.accent} ${theme.radiusInner} flex items-center justify-center text-white shadow-lg ${theme.accentShadow}`}>
               <i className="fas fa-city"></i>
             </div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tight">SyndicPro</h1>
+            <h1 className={`text-xl font-black ${theme.isDark ? 'text-white' : 'text-slate-800'} tracking-tight`}>SyndicPro</h1>
          </div>
          
          <nav className="flex-1 px-6 space-y-1 overflow-y-auto no-scrollbar pb-10">
@@ -107,14 +112,14 @@ const Layout: React.FC<LayoutProps> = ({
               <Link 
                 key={item.path}
                 to={item.path} 
-                className={`sidebar-item flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-300 group ${
+                className={`sidebar-item flex items-center justify-between px-4 py-3.5 ${theme.radiusInner} transition-all duration-300 group ${
                   location.pathname === item.path 
-                  ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' 
-                  : 'hover:bg-slate-50 text-slate-500'
+                  ? `bg-${theme.accent} text-white shadow-xl ${theme.accentShadow}` 
+                  : `hover:${theme.accentLight} ${theme.mutedColor}`
                 }`}
               >
                 <div className={`flex items-center gap-4 ${isAr ? 'flex-row-reverse' : ''}`}>
-                  <i className={`fas ${item.icon} w-5 text-center text-sm ${location.pathname === item.path ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600'}`}></i>
+                  <i className={`fas ${item.icon} w-5 text-center text-sm ${location.pathname === item.path ? 'text-white' : `${theme.mutedColor} group-hover:text-${theme.accent}`}`}></i>
                   <span className="font-bold text-[13px] tracking-tight">{item.label}</span>
                 </div>
                 {item.badge && item.badge > 0 && (
@@ -128,16 +133,16 @@ const Layout: React.FC<LayoutProps> = ({
 
          <div className="p-6 mt-auto">
             {!isAdmin && (
-              <div className="bg-emerald-600 rounded-2xl p-6 text-white relative overflow-hidden group mb-4">
+              <div className={`bg-${theme.accent} ${theme.radiusInner} p-6 text-white relative overflow-hidden group mb-4`}>
                  <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl transform rotate-12 group-hover:scale-110 transition-transform"><i className="fas fa-shield-halved"></i></div>
                  <h4 className="font-black text-sm mb-2 relative z-10">{isAr ? 'مساحة آمنة' : 'Espace Sécurisé'}</h4>
-                 <p className="text-[10px] text-emerald-100 opacity-80 leading-relaxed mb-4 relative z-10">{isAr ? 'جميع بياناتك مشفرة محليا' : 'Vos données sont protégées localement.'}</p>
-                 <Link to="/profile" className="block w-full text-center py-2.5 bg-white text-emerald-600 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-emerald-50 transition-colors">{t.profile}</Link>
+                 <p className="text-[10px] text-white opacity-80 leading-relaxed mb-4 relative z-10">{isAr ? 'جميع بياناتك مشفرة محليا' : 'Vos données sont protégées localement.'}</p>
+                 <Link to="/profile" className={`block w-full text-center py-2.5 bg-white text-${theme.accent} rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-colors`}>{t.profile}</Link>
               </div>
             )}
             <button 
               onClick={() => setShowLogoutModal(true)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-rose-500 transition-colors font-bold text-sm ${isAr ? 'flex-row-reverse' : ''}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 ${theme.mutedColor} hover:text-rose-500 transition-colors font-bold text-sm ${isAr ? 'flex-row-reverse' : ''}`}
             >
               <i className="fas fa-power-off"></i>
               <span>{t.logout}</span>
@@ -147,24 +152,24 @@ const Layout: React.FC<LayoutProps> = ({
 
       {/* MAIN CONTENT */}
       <main className="flex-1 min-w-0 flex flex-col">
-         <header className={`h-20 bg-white/80 backdrop-blur-md px-10 flex items-center justify-between sticky top-0 z-40 border-b border-slate-100 no-print ${isAr ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex items-center gap-4 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-100 w-96 ${isAr ? 'flex-row-reverse' : ''}`}>
+         <header className={`h-20 ${theme.sidebarBg} bg-opacity-80 backdrop-blur-md px-10 flex items-center justify-between sticky top-0 z-40 border-b border-slate-100 no-print ${isAr ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex items-center gap-4 ${theme.isDark ? 'bg-slate-800' : 'bg-slate-50'} px-4 py-2.5 rounded-2xl border border-slate-100 w-96 ${isAr ? 'flex-row-reverse' : ''}`}>
               <i className="fas fa-search text-slate-300 text-sm"></i>
-              <input type="text" placeholder={t.search} className={`bg-transparent border-none outline-none text-sm font-medium w-full text-slate-600 ${isAr ? 'text-right' : ''}`} />
+              <input type="text" placeholder={t.search} className={`bg-transparent border-none outline-none text-sm font-medium w-full ${theme.isDark ? 'text-white' : 'text-slate-600'} ${isAr ? 'text-right' : ''}`} />
             </div>
             <div className={`flex items-center gap-6 ${isAr ? 'flex-row-reverse' : ''}`}>
               <button 
                 onClick={() => onLanguageToggle?.(language === 'fr' ? 'ar' : 'fr')}
-                className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 transition-all font-black text-[10px] uppercase"
+                className={`w-10 h-10 ${theme.isDark ? 'bg-slate-800' : 'bg-slate-50'} hover:${theme.accentLight} ${theme.radiusInner} flex items-center justify-center text-slate-400 transition-all font-black text-[10px] uppercase`}
               >
                 {t.langLabel.substring(0,2)}
               </button>
               <div className={`flex items-center gap-3 border-slate-100 ${isAr ? 'border-r pr-6' : 'border-l pl-6'} ${isAr ? 'flex-row-reverse' : ''}`}>
                 <div className={isAr ? 'text-left' : 'text-right'}>
-                  <p className="text-sm font-black text-slate-800 leading-none mb-1">{currentUser}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{isAdmin ? 'Premium Admin' : 'Résident'}</p>
+                  <p className={`text-sm font-black ${theme.isDark ? 'text-white' : 'text-slate-800'} leading-none mb-1`}>{currentUser}</p>
+                  <p className={`text-[10px] font-bold ${theme.mutedColor} uppercase tracking-tighter`}>{isAdmin ? 'Premium Admin' : 'Résident'}</p>
                 </div>
-                <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-black">
+                <div className={`w-10 h-10 ${theme.accentLight} border ${theme.accentBorder} ${theme.radiusInner} flex items-center justify-center text-${theme.accent} font-black`}>
                   {currentUser.charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -178,14 +183,14 @@ const Layout: React.FC<LayoutProps> = ({
       {showLogoutModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowLogoutModal(false)}></div>
-          <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-10 shadow-2xl relative z-10 animate-in zoom-in duration-200 text-center border border-slate-100">
+          <div className={`${theme.sidebarBg} ${theme.radiusOuter} w-full max-w-sm p-10 shadow-2xl relative z-10 animate-in zoom-in duration-200 text-center border border-slate-100`}>
             <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-6">
               <i className="fas fa-power-off"></i>
             </div>
-            <h3 className="font-black text-slate-800 mb-2 uppercase tracking-tight text-xl">{t.logout} ?</h3>
+            <h3 className={`font-black ${theme.isDark ? 'text-white' : 'text-slate-800'} mb-2 uppercase tracking-tight text-xl`}>{t.logout} ?</h3>
             <div className="flex flex-col gap-3 mt-8">
-              <button onClick={() => { setShowLogoutModal(false); onLogout(); }} className="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-rose-700 transition-all text-xs">{isAr ? 'تأكيد' : 'Confirmer'}</button>
-              <button onClick={() => setShowLogoutModal(false)} className="w-full py-4 text-slate-400 font-black uppercase tracking-widest hover:text-slate-600 transition-all text-xs">{isAr ? 'إلغاء' : 'Annuler'}</button>
+              <button onClick={() => { setShowLogoutModal(false); onLogout(); }} className={`w-full py-4 bg-rose-600 text-white ${theme.radiusInner} font-black uppercase tracking-widest shadow-xl hover:bg-rose-700 transition-all text-xs`}>{isAr ? 'تأكيد' : 'Confirmer'}</button>
+              <button onClick={() => setShowLogoutModal(false)} className={`w-full py-4 ${theme.mutedColor} font-black uppercase tracking-widest hover:text-slate-600 transition-all text-xs`}>{isAr ? 'إلغاء' : 'Annuler'}</button>
             </div>
           </div>
         </div>

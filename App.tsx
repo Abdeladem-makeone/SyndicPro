@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -67,7 +68,8 @@ const AppContent: React.FC = () => {
       name: '', address: '', totalUnits: 0, unitsPerFloor: 0, numFloors: 0, 
       defaultMonthlyFee: 50, isConfigured: false, autoRemindersEnabled: false, 
       notificationsEnabled: false, reminderLanguage: 'fr', ownerInterfaceEnabled: false,
-      ownerShowBalance: false, ownerShowExpenseRegister: false, ownerCanCreateOps: false
+      ownerShowBalance: false, ownerShowExpenseRegister: false, ownerCanCreateOps: false,
+      activeTheme: 'oceon'
     });
     setApartments(apts || []);
     const financeData = storage.loadAllYearlyData();
@@ -115,6 +117,7 @@ const AppContent: React.FC = () => {
       role={user.role} 
       onLogout={handleLogout}
       language={user.language || 'fr'}
+      activeTheme={buildingInfo?.activeTheme || 'oceon'}
       onLanguageToggle={(lang) => {
         const next = { ...user, language: lang };
         setUser(next);

@@ -1,4 +1,6 @@
 
+export type AppThemeId = 'oceon' | 'forest' | 'midnight';
+
 export interface User {
   id: string;
   username: string;
@@ -45,6 +47,7 @@ export interface BuildingInfo {
   autoRemindersEnabled: boolean;
   notificationsEnabled: boolean;
   reminderLanguage: 'ar' | 'fr';
+  activeTheme?: AppThemeId; // Current active theme ID
   whatsappTemplate?: string;
   whatsappDetailedTemplate?: string;
   lastSyncDate?: string;

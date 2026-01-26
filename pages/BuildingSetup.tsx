@@ -1,7 +1,9 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BuildingInfo, Apartment } from '../types';
+import { BuildingInfo, Apartment, AppThemeId } from '../types';
 import { storage } from '../utils/storage';
+import { APP_THEMES, ThemeConfig } from '../utils/themes';
 
 interface BuildingSetupProps {
   buildingInfo: BuildingInfo;
@@ -21,9 +23,10 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
     ...buildingInfo,
     name: buildingInfo.name || '',
     address: buildingInfo.address || '',
-    defaultMonthlyFee: buildingInfo.defaultMonthlyFee || 50
+    defaultMonthlyFee: buildingInfo.defaultMonthlyFee || 50,
+    activeTheme: buildingInfo.activeTheme || 'oceon'
   });
-  const [activeTab, setActiveTab] = useState<'building' | 'syndic' | 'owners'>('building');
+  const [activeTab, setActiveTab] = useState<'building' | 'syndic' | 'owners' | 'themes'>('building');
   const [loading, setLoading] = useState(false);
   const [virtualFiles, setVirtualFiles] = useState<{name: string, size: number}[]>([]);
   const navigate = useNavigate();
@@ -109,6 +112,10 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
     setFormData({ ...formData, [field]: !formData[field] });
   };
 
+  const handleThemeChange = (id: AppThemeId) => {
+    setFormData({ ...formData, activeTheme: id });
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-16">
       {loading && (
@@ -146,6 +153,9 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
          <button onClick={() => setActiveTab('owners')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'owners' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
             <i className="fas fa-users-gear"></i> Propriétaires
          </button>
+         <button onClick={() => setActiveTab('themes')} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'themes' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}>
+            <i className="fas fa-palette"></i> Themes
+         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -153,9 +163,11 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden min-h-[500px] flex flex-col">
               <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                  <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
-                    {activeTab === 'building' ? 'Structure du bâtiment' : activeTab === 'syndic' ? 'Informations du Syndic' : 'Droits & Visibilité'}
+                    {activeTab === 'building' ? 'Structure du bâtiment' : 
+                     activeTab === 'syndic' ? 'Informations du Syndic' : 
+                     activeTab === 'owners' ? 'Droits & Visibilité' : 'Personnalisation Visuelle'}
                  </h2>
-                 <i className={`fas ${activeTab === 'building' ? 'fa-city' : activeTab === 'syndic' ? 'fa-id-card' : 'fa-lock'} text-slate-300`}></i>
+                 <i className={`fas ${activeTab === 'building' ? 'fa-city' : activeTab === 'syndic' ? 'fa-id-card' : activeTab === 'owners' ? 'fa-lock' : 'fa-paint-brush'} text-slate-300`}></i>
               </div>
 
               <form onSubmit={handleSubmit} className="p-10 flex-1 flex flex-col justify-between">
@@ -275,6 +287,52 @@ const BuildingSetup: React.FC<BuildingSetupProps> = ({
 
                        <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all mt-auto">
                           Sauvegarder les droits
+                       </button>
+                    </div>
+                 )}
+
+                 {activeTab === 'themes' && (
+                    <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+                       <div className="grid grid-cols-1 gap-4">
+                          {(Object.values(APP_THEMES) as ThemeConfig[]).map((t) => (
+                             <button 
+                                key={t.id} 
+                                type="button"
+                                onClick={() => handleThemeChange(t.id)}
+                                className={`flex items-center gap-6 p-6 border-2 transition-all ${t.radiusOuter} ${
+                                   formData.activeTheme === t.id 
+                                   ? `border-${t.accent} bg-${t.accentLight} shadow-lg scale-[1.02]` 
+                                   : 'border-slate-100 bg-white hover:border-slate-200'
+                                }`}
+                             >
+                                <div className={`w-14 h-14 ${t.radiusInner} bg-${t.accent} flex items-center justify-center text-white text-xl`}>
+                                   <i className="fas fa-swatchbook"></i>
+                                </div>
+                                <div className="text-left flex-1">
+                                   <p className={`font-black uppercase tracking-widest ${formData.activeTheme === t.id ? `text-${t.accent}` : 'text-slate-800'}`}>
+                                      {t.name}
+                                   </p>
+                                   <div className="flex gap-2 mt-2">
+                                      <div className={`w-4 h-4 rounded-full bg-${t.accent}`}></div>
+                                      <div className={`w-4 h-4 rounded-full ${t.appBg}`}></div>
+                                      <div className={`w-4 h-4 rounded-full border border-slate-200 ${t.sidebarBg}`}></div>
+                                   </div>
+                                </div>
+                                {formData.activeTheme === t.id && (
+                                   <div className={`w-8 h-8 rounded-full bg-${t.accent} text-white flex items-center justify-center text-xs`}>
+                                      <i className="fas fa-check"></i>
+                                   </div>
+                                )}
+                             </button>
+                          ))}
+                       </div>
+                       <div className="p-6 bg-amber-50 border border-amber-100 rounded-3xl">
+                          <p className="text-[10px] font-bold text-amber-700 leading-relaxed italic text-center">
+                             Note: Le changement de thème s'appliquera immédiatement à toute l'interface après avoir cliqué sur "Appliquer le thème".
+                          </p>
+                       </div>
+                       <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all mt-auto">
+                          Appliquer le thème sélectionné
                        </button>
                     </div>
                  )}
