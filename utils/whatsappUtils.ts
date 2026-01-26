@@ -25,7 +25,7 @@ export const DEFAULT_TEMPLATES = {
 /**
  * Nettoie et formate le numéro de téléphone pour WhatsApp.
  */
-const formatPhoneNumber = (phone: string): string | null => {
+export const formatPhoneNumber = (phone: string): string | null => {
   const cleanPhone = phone.replace(/\D/g, '');
   if (!cleanPhone) return null;
   
@@ -47,6 +47,23 @@ const parseTemplate = (template: string, vars: Record<string, string | number>):
     result = result.replace(regex, String(value));
   });
   return result;
+};
+
+/**
+ * Génère le lien pour envoyer l'OTP au syndic
+ */
+export const generateLoginOTPWhatsAppLink = (
+  syndicPhone: string,
+  ownerName: string,
+  aptNumber: string,
+  otp: string
+) => {
+  const finalPhone = formatPhoneNumber(syndicPhone);
+  if (!finalPhone) return null;
+
+  const message = `🔐 *Authentification SyndicPro*\n\nBonjour,\nJe souhaite me connecter à mon espace propriétaire.\n\n👤 *Propriétaire :* ${ownerName}\n🏠 *Appartement :* ${aptNumber}\n🔑 *Code de vérification :* ${otp}\n\n_Ce code expire dans 1 minute._`;
+  
+  return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
 };
 
 /**
