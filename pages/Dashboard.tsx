@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import StatCard from '../components/StatCard';
 import { Apartment, Expense, Payment, BuildingInfo, AssetPayment } from '../types';
@@ -49,8 +50,9 @@ const Dashboard: React.FC<DashboardProps> = ({ apartments, expenses, payments, a
   const showAutoReminder = buildingInfo.autoRemindersEnabled && unpaidCurrentMonth.length > 0 && currentDay > 20;
 
   useEffect(() => {
+    // Fix: cast anime to any to handle non-callable error when imported as a module in certain environments
     // Animation d'entrée des StatCards (Stagger)
-    anime({
+    (anime as any)({
       targets: '.stat-card-anim',
       translateY: [30, 0],
       opacity: [0, 1],
@@ -59,8 +61,9 @@ const Dashboard: React.FC<DashboardProps> = ({ apartments, expenses, payments, a
       duration: 1200
     });
 
+    // Fix: cast anime to any
     // Animation d'entrée des blocs de contenu principaux
-    anime({
+    (anime as any)({
       targets: '.content-fade-up',
       translateY: [20, 0],
       opacity: [0, 1],
@@ -69,9 +72,10 @@ const Dashboard: React.FC<DashboardProps> = ({ apartments, expenses, payments, a
       duration: 800
     });
 
+    // Fix: cast anime to any
     // Animation du compteur pour le solde actuel (Exemple)
     const counterObj = { value: 0 };
-    anime({
+    (anime as any)({
       targets: counterObj,
       value: balance,
       round: 1,

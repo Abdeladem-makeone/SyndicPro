@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Apartment, Payment, BuildingInfo } from '../types';
 import { exportToPDF } from '../utils/pdfUtils';
+import anime from 'animejs';
 
 interface ApartmentsProps {
   apartments: Apartment[];
@@ -25,6 +26,18 @@ const Apartments: React.FC<ApartmentsProps> = ({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   
   const currentYear = new Date().getFullYear();
+
+  useEffect(() => {
+    // Fix: cast anime to any to handle non-callable error
+    (anime as any)({
+      targets: '.apt-row',
+      translateX: [-20, 0],
+      opacity: [0, 1],
+      delay: anime.stagger(50),
+      easing: 'easeOutQuad',
+      duration: 600
+    });
+  }, [apartments, sortField, sortOrder]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -90,7 +103,7 @@ const Apartments: React.FC<ApartmentsProps> = ({
   };
 
   return (
-    <div className="space-y-10 w-full">
+    <div className="space-y-10 w-full animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-widest">Gestion du Parc</h2>
@@ -144,7 +157,7 @@ const Apartments: React.FC<ApartmentsProps> = ({
                 const paidCount = getPaidMonthsCount(apt.id);
                 
                 return (
-                  <tr key={apt.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={apt.id} className="apt-row hover:bg-slate-50/50 transition-colors group opacity-0">
                     <td className="px-6 py-5 font-black text-indigo-600">{apt.number}</td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
@@ -183,16 +196,6 @@ const Apartments: React.FC<ApartmentsProps> = ({
                   </tr>
                 );
               })}
-              {sortedApartments.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-20 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-200">
-                      <i className="fas fa-building text-3xl"></i>
-                    </div>
-                    <p className="text-slate-400 font-bold italic">Aucun appartement configuré.</p>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -204,64 +207,23 @@ const Apartments: React.FC<ApartmentsProps> = ({
             <h3 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               {isEditing ? `Modifier Appartement ${formData.number}` : 'Nouvel Appartement'}
             </h3>
-            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Numéro de l'Appartement</label>
-                <input 
-                  type="text" 
-                  value={formData.number || ''}
-                  onChange={(e) => setFormData({...formData, number: e.target.value})}
-                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold"
-                  placeholder="Ex: A1"
-                />
+                <input type="text" value={formData.number || ''} onChange={(e) => setFormData({...formData, number: e.target.value})} className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Étage (0 pour RDC)</label>
-                <input 
-                  type="number" 
-                  value={formData.floor || 0}
-                  onChange={(e) => setFormData({...formData, floor: parseInt(e.target.value) || 0})}
-                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold"
-                />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Étage</label>
+                <input type="number" value={formData.floor || 0} onChange={(e) => setFormData({...formData, floor: parseInt(e.target.value) || 0})} className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold" />
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Propriétaire Actuel</label>
-                <input 
-                  type="text" 
-                  value={formData.owner || ''}
-                  onChange={(e) => setFormData({...formData, owner: e.target.value})}
-                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold"
-                  placeholder="Nom complet"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cotisation Mensuelle (DH)</label>
-                <div className="relative">
-                  <i className="fas fa-money-bill-wave absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                  <input 
-                    type="number" 
-                    value={formData.monthlyFee || 0}
-                    onChange={(e) => setFormData({...formData, monthlyFee: parseFloat(e.target.value) || 0})}
-                    className="w-full pl-11 pr-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-black text-indigo-600"
-                  />
-                </div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Propriétaire</label>
+                <input type="text" value={formData.owner || ''} onChange={(e) => setFormData({...formData, owner: e.target.value})} className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold" />
               </div>
             </div>
-
             <div className="flex gap-3 pt-4">
-              <button 
-                onClick={() => { setIsEditing(null); setShowAddModal(false); }}
-                className="flex-1 px-4 py-3 border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
-              >
-                Annuler
-              </button>
-              <button 
-                onClick={handleSave}
-                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all"
-              >
-                Valider
-              </button>
+              <button onClick={() => { setIsEditing(null); setShowAddModal(false); }} className="flex-1 px-4 py-3 border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500">Annuler</button>
+              <button onClick={handleSave} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">Valider</button>
             </div>
           </div>
         </div>

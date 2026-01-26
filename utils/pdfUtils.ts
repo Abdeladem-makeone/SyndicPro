@@ -1,20 +1,17 @@
 
-// Add missing imports for PDF generation
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
-// Define theme colors for PDF generation consistent with the UI
 const COLORS = {
-  PRIMARY: [79, 70, 229], // indigo-600
-  SECONDARY: [100, 116, 139], // slate-500
-  SUCCESS: [16, 185, 129], // emerald-500
-  DANGER: [239, 68, 68], // rose-500
-  TEXT_DARK: [30, 41, 59], // slate-800
-  WHITE: [255, 255, 255]
+  PRIMARY: [79, 70, 229] as [number, number, number],
+  SECONDARY: [100, 116, 139] as [number, number, number],
+  SUCCESS: [16, 185, 129] as [number, number, number],
+  DANGER: [239, 68, 68] as [number, number, number],
+  TEXT_DARK: [30, 41, 59] as [number, number, number],
+  WHITE: [255, 255, 255] as [number, number, number]
 };
 
-// Helper function to draw a consistent header on each PDF page
-const drawHeader = (doc: any, title: string, subtitle: string) => {
+const drawHeader = (doc: jsPDF, title: string, subtitle: string) => {
   doc.setFillColor(...COLORS.PRIMARY);
   doc.rect(0, 0, 210, 40, 'F');
   doc.setTextColor(...COLORS.WHITE);
@@ -26,14 +23,11 @@ const drawHeader = (doc: any, title: string, subtitle: string) => {
   doc.text(subtitle, 14, 34);
 };
 
-/**
- * Generic PDF export function used by various listing pages (Apartments, Expenses, Owners, Payments)
- */
 export const exportToPDF = (title: string, headers: string[], rows: any[][], fileName: string) => {
-  const doc = new jsPDF() as any;
+  const doc = new jsPDF();
   drawHeader(doc, "SYNDICPRO MANAGER", title.toUpperCase());
   
-  doc.autoTable({
+  autoTable(doc, {
     startY: 50,
     head: [headers],
     body: rows,
@@ -45,14 +39,11 @@ export const exportToPDF = (title: string, headers: string[], rows: any[][], fil
   doc.save(`${fileName}.pdf`);
 };
 
-/**
- * Specialized export for cash flow state overview
- */
 export const exportCashStatePDF = (buildingName: string, summary: any, transactions: any[]) => {
-  const doc = new jsPDF() as any;
+  const doc = new jsPDF();
   drawHeader(doc, "ÉTAT DE CAISSE", buildingName.toUpperCase());
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: 50,
     head: [['Désignation', 'Valeur']],
     body: [
@@ -65,84 +56,80 @@ export const exportCashStatePDF = (buildingName: string, summary: any, transacti
     styles: { font: 'helvetica' }
   });
 
-  doc.autoTable({
-    startY: (doc as any).lastAutoTable.finalY + 10,
+  // Utilisation sécurisée de la position finale du tableau précédent
+  const finalY = (doc as any).lastAutoTable?.finalY || 80;
+
+  autoTable(doc, {
+    startY: finalY + 10,
     head: [['Date', 'Type', 'Description', 'Montant']],
     body: transactions.map(t => [t.date, t.type, t.description, t.amount]),
     theme: 'striped',
     headStyles: { fillColor: COLORS.SECONDARY },
-    styles: { font: 'helvetica' }
+    styles: { font: 'helvetica', fontSize: 8 }
   });
 
   doc.save(`Etat_Caisse_${buildingName.replace(/\s+/g, '_')}.pdf`);
 };
 
-/**
- * Detailed annual report with categories breakdown and unpaid status
- */
-export const exportAnnualReportPDF = async (
+export const exportAnnualReportPDF = (
   buildingName: string,
   year: number,
   summary: any,
   unpaidList: any[],
   expenseBreakdown: any[],
-  revenueBreakdown: any[] // Nouveau paramètre
+  revenueBreakdown: any[]
 ) => {
-  const doc = new jsPDF() as any;
-
+  const doc = new jsPDF();
   drawHeader(doc, "BILAN ANNUEL DE GESTION", `${buildingName.toUpperCase()} - ANNÉE ${year}`);
 
-  // Section I : Recettes Consolidées
   doc.setTextColor(...COLORS.TEXT_DARK);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text("I. RÉCAPITULATIF DES RECETTES", 14, 65);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: 70,
     head: [['Source de Revenu', 'Montant Encaissé']],
-    body: revenueBreakdown.map(r => [
-      r.name,
-      `${r.value.toLocaleString()} DH`
-    ]),
+    body: revenueBreakdown.map(r => [r.name, `${r.value.toLocaleString()} DH`]),
     theme: 'grid',
     headStyles: { fillColor: COLORS.PRIMARY },
     styles: { font: 'helvetica' },
     columnStyles: { 1: { halign: 'right' } }
   });
 
-  const nextY = (doc as any).lastAutoTable.finalY + 15;
+  let currentY = (doc as any).lastAutoTable?.finalY || 100;
+  currentY += 15;
 
-  // Section II : Résumé financier
   doc.setTextColor(...COLORS.TEXT_DARK);
-  doc.text("II. ANALYSE FINANCIÈRE GLOBALE", 14, nextY);
+  doc.setFontSize(14);
+  doc.text("II. ANALYSE FINANCIÈRE GLOBALE", 14, currentY);
 
-  const drawStatBox = (x: number, y: number, label: string, value: string, color: number[]) => {
+  const drawStatBox = (x: number, y: number, label: string, value: string, color: [number, number, number]) => {
     doc.setDrawColor(230, 230, 230);
     doc.setFillColor(...COLORS.WHITE);
     doc.roundedRect(x, y, 60, 25, 3, 3, 'FD');
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.SECONDARY);
-    doc.setFont('helvetica', 'normal');
     doc.text(label, x + 5, y + 8);
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setTextColor(...color);
     doc.setFont('helvetica', 'bold');
     doc.text(value, x + 5, y + 18);
   };
 
-  drawStatBox(14, nextY + 10, "TOTAL RECETTES", `+${summary.totalRevenue.toLocaleString()} DH`, COLORS.SUCCESS);
-  drawStatBox(77, nextY + 10, "TOTAL DÉPENSES", `-${summary.totalExpenses.toLocaleString()} DH`, COLORS.DANGER);
-  drawStatBox(140, nextY + 10, "SOLDE NET", `${summary.balance.toLocaleString()} DH`, COLORS.PRIMARY);
+  drawStatBox(14, currentY + 10, "TOTAL RECETTES", `+${summary.totalRevenue.toLocaleString()} DH`, COLORS.SUCCESS);
+  drawStatBox(77, currentY + 10, "TOTAL DÉPENSES", `-${summary.totalExpenses.toLocaleString()} DH`, COLORS.DANGER);
+  drawStatBox(140, currentY + 10, "SOLDE NET", `${summary.balance.toLocaleString()} DH`, COLORS.PRIMARY);
 
-  // Section III
+  currentY += 45;
+
   doc.setTextColor(...COLORS.TEXT_DARK);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text("III. ÉTAT DES CRÉANCES (IMPAYÉS RÉSIDENTS)", 14, nextY + 50);
+  doc.text("III. ÉTAT DES CRÉANCES (IMPAYÉS)", 14, currentY);
 
-  doc.autoTable({
-    startY: nextY + 55,
+  autoTable(doc, {
+    startY: currentY + 5,
     head: [['Appartement', 'Propriétaire', 'Retards', 'Montant Dû']],
     body: unpaidList.map(item => [
       item.number,
@@ -152,17 +139,18 @@ export const exportAnnualReportPDF = async (
     ]),
     theme: 'striped',
     headStyles: { fillColor: COLORS.DANGER },
-    styles: { font: 'helvetica' },
+    styles: { font: 'helvetica', fontSize: 9 },
     columnStyles: { 3: { halign: 'right' } }
   });
 
-  const lastY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY : 200;
-  
-  // Section IV
-  if (lastY < 230) {
-    doc.text("IV. RÉPARTITION DES CHARGES", 14, lastY + 20);
-    doc.autoTable({
-      startY: lastY + 25,
+  currentY = (doc as any).lastAutoTable?.finalY || currentY + 40;
+
+  if (currentY < 230) {
+    doc.setTextColor(...COLORS.TEXT_DARK);
+    doc.setFontSize(14);
+    doc.text("IV. RÉPARTITION DES CHARGES", 14, currentY + 15);
+    autoTable(doc, {
+      startY: currentY + 20,
       head: [['Catégorie', 'Montant', 'Part (%)']],
       body: expenseBreakdown.map(item => [
         item.name,
@@ -171,10 +159,9 @@ export const exportAnnualReportPDF = async (
       ]),
       theme: 'grid',
       headStyles: { fillColor: COLORS.PRIMARY },
-      styles: { font: 'helvetica' },
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'center' } }
+      styles: { font: 'helvetica', fontSize: 9 }
     });
   }
 
-  doc.save(`Bilan_SyndicPro_${buildingName.replace(/\s+/g, '_')}_${year}.pdf`);
+  doc.save(`Bilan_${year}_${buildingName.replace(/\s+/g, '_')}.pdf`);
 };

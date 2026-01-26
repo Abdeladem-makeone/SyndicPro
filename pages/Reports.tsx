@@ -16,29 +16,38 @@ const Reports: React.FC<ReportsProps> = ({ apartments, expenses, payments, asset
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const calculateAnnualMetrics = (year: number) => {
-    // Recettes résidents
+    // Recettes résidents filtrées par année
     const yearPayments = payments.filter(p => p.year === year);
     const totalAptRevenue = yearPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Recettes biens (Revenus divers)
+    // Recettes biens filtrées par année
     const yearAssetPayments = assetPayments.filter(p => p.year === year);
     const totalAssetRevenue = yearAssetPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Dépenses
-    const yearExpenses = expenses.filter(e => new Date(e.date).getFullYear() === year && !e.excludedFromReports);
+    // Dépenses filtrées par année (en vérifiant que la date est valide)
+    const yearExpenses = expenses.filter(e => {
+      const expDate = new Date(e.date);
+      return expDate.getFullYear() === year && !e.excludedFromReports;
+    });
     const totalExpenses = yearExpenses.reduce((sum, e) => sum + e.amount, 0);
     
     const totalRevenue = totalAptRevenue + totalAssetRevenue;
-    
-    // Calcul taux (uniquement sur cotisations car revenus biens sont souvent contractuels variables)
     const expectedAptRevenue = apartments.reduce((sum, a) => sum + a.monthlyFee, 0) * 12;
     const collectionRate = expectedAptRevenue > 0 ? (totalAptRevenue / expectedAptRevenue) * 100 : 0;
 
-    return { totalAptRevenue, totalAssetRevenue, totalRevenue, totalExpenses, balance: totalRevenue - totalExpenses, collectionRate };
+    return { 
+      totalAptRevenue, 
+      totalAssetRevenue, 
+      totalRevenue, 
+      totalExpenses, 
+      balance: totalRevenue - totalExpenses, 
+      collectionRate 
+    };
   };
 
   const handleExportAnnualReport = () => {
     const metrics = calculateAnnualMetrics(selectedYear);
+    
     const unpaidList = apartments.map(apt => {
       const aptPayments = payments.filter(p => p.apartmentId === apt.id && p.year === selectedYear);
       const paidCount = aptPayments.length;
@@ -51,68 +60,70 @@ const Reports: React.FC<ReportsProps> = ({ apartments, expenses, payments, asset
       };
     }).filter(item => item.unpaidCount > 0);
 
-    const categories = expenses
-      .filter(e => new Date(e.date).getFullYear() === selectedYear && !e.excludedFromReports)
+    const categoriesMap = expenses
+      .filter(e => {
+        const d = new Date(e.date);
+        return d.getFullYear() === selectedYear && !e.excludedFromReports;
+      })
       .reduce((acc: Record<string, number>, e: Expense) => {
         acc[e.category] = (acc[e.category] || 0) + e.amount;
         return acc;
       }, {} as Record<string, number>);
 
-    const totalExp = (Object.values(categories) as number[]).reduce((a: number, b: number) => a + b, 0);
-    const expenseBreakdown = (Object.entries(categories) as [string, number][]).map(([name, value]) => ({
+    const totalExp = Object.values(categoriesMap).reduce((a, b) => a + b, 0);
+    const expenseBreakdown = Object.entries(categoriesMap).map(([name, value]) => ({
       name,
       value,
       percentage: totalExp > 0 ? (value / totalExp) * 100 : 0
     }));
 
-    // On prépare un résumé des revenus pour le PDF
     const revenueSummary = [
       { name: 'Cotisations Résidents', value: metrics.totalAptRevenue },
       { name: 'Revenus des Biens', value: metrics.totalAssetRevenue }
     ];
 
-    exportAnnualReportPDF(buildingInfo.name, selectedYear, metrics, unpaidList, expenseBreakdown, revenueSummary);
+    exportAnnualReportPDF(
+      buildingInfo.name || "Résidence", 
+      selectedYear, 
+      metrics, 
+      unpaidList, 
+      expenseBreakdown, 
+      revenueSummary
+    );
   };
 
   const handleExportCashState = () => {
     const metrics = calculateAnnualMetrics(selectedYear);
-    const totalAptRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-    const totalAssetRevenue = assetPayments.reduce((sum, p) => sum + p.amount, 0);
-    const totalExpenses = expenses.filter(e => !e.excludedFromReports).reduce((sum, e) => sum + e.amount, 0);
     
-    const summary = { totalRevenue: totalAptRevenue + totalAssetRevenue, totalExpenses, balance: (totalAptRevenue + totalAssetRevenue) - totalExpenses };
-
+    // Transactions filtrées uniquement pour l'année sélectionnée
     const allTransactions = [
-      ...payments.map(p => {
+      ...payments.filter(p => p.year === selectedYear).map(p => {
         const apt = apartments.find(a => a.id === p.apartmentId);
         return {
           date: new Date(p.paidDate).toLocaleDateString('fr-FR'),
           rawDate: new Date(p.paidDate),
           type: 'COTISATION',
-          description: `${MONTHS[p.month]} ${p.year} - Appt ${apt?.number || '?'}`,
+          description: `${MONTHS[p.month]} - Appt ${apt?.number || '?'}`,
           amount: `+${p.amount} DH`,
-          isExpense: false
         };
       }),
-      ...assetPayments.map(ap => ({
+      ...assetPayments.filter(ap => ap.year === selectedYear).map(ap => ({
           date: new Date(ap.date).toLocaleDateString('fr-FR'),
           rawDate: new Date(ap.date),
           type: 'REVENU BIEN',
           description: `Revenu: ${ap.period}`,
           amount: `+${ap.amount} DH`,
-          isExpense: false
       })),
-      ...expenses.map(e => ({
+      ...expenses.filter(e => new Date(e.date).getFullYear() === selectedYear).map(e => ({
         date: new Date(e.date).toLocaleDateString('fr-FR'),
         rawDate: new Date(e.date),
         type: 'DÉPENSE',
         description: e.excludedFromReports ? `(EXCLU) ${e.description}` : e.description,
         amount: `-${e.amount} DH`,
-        isExpense: true
       }))
-    ].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime()).slice(0, 50);
+    ].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
 
-    exportCashStatePDF(buildingInfo.name, summary, allTransactions);
+    exportCashStatePDF(buildingInfo.name || "Résidence", metrics, allTransactions);
   };
 
   const metrics = calculateAnnualMetrics(selectedYear);
@@ -213,7 +224,7 @@ const Reports: React.FC<ReportsProps> = ({ apartments, expenses, payments, asset
                       <span>Recouvrement Cotis.</span>
                       <span className="text-indigo-600">{metrics.collectionRate.toFixed(1)}%</span>
                    </div>
-                   <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                   <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner">
                       <div 
                         className="bg-indigo-600 h-full transition-all duration-1000" 
                         style={{ width: `${Math.min(metrics.collectionRate, 100)}%` }}
@@ -234,14 +245,14 @@ const Reports: React.FC<ReportsProps> = ({ apartments, expenses, payments, asset
                    Info Gestion
                 </h3>
                 <p className="text-sm text-slate-400 font-medium leading-relaxed">
-                  Ce rapport consolide l'ensemble des entrées (Cotisations + Revenus patrimoniaux) et soustrait les dépenses validées.
+                  Ce rapport consolide l'ensemble des entrées (Cotisations + Revenus patrimoniaux) et soustrait les dépenses validées pour l'année {selectedYear}.
                 </p>
                 <div className="mt-8 space-y-4">
                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-indigo-300">
-                      <i className="fas fa-check-circle"></i> Optimisé pour AG
+                      <i className="fas fa-check-circle"></i> Rapport de conformité
                    </div>
                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-indigo-300">
-                      <i className="fas fa-check-circle"></i> Conforme comptabilité locale
+                      <i className="fas fa-check-circle"></i> Données validées localement
                    </div>
                 </div>
              </div>
